@@ -15,6 +15,23 @@
         "email_exists": "This email is already registered",
         "success_register": "Account created! Now log in."
     },
+
+    "profile": {
+        "profile_title": "Profile",
+        "username_label": "Username",
+        "email_label": "Email",
+        "password_label": "Password",
+        "update_button": "Update Profile",
+        "update_success": "Profile updated successfully!",
+        "update_error": "Error updating profile. Please try again."
+    },
+
+    "settings": {
+        "settings_title": "Settings"
+    },
+
+    "navigation": "Navigation",
+    "chat": "Chat",
     
     "title": "Fineas Advisor",
     "language": "Language",

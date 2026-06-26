@@ -15,7 +15,24 @@
         "email_exists": "Этот email уже зарегистрирован",
         "success_register": "Аккаунт создан! Теперь войдите."
     },
+
+    "profile": {
+        "profile_title": "Профиль",
+        "username_label": "Имя пользователя",
+        "email_label": "Email",
+        "password_label": "Пароль",
+        "update_button": "Обновить профиль",
+        "update_success": "Профиль успешно обновлен!",
+        "update_error": "Ошибка при обновлении профиля. Попробуйте еще раз."
+    },
     
+    "settings": {
+        "settings_title": "Настройки"
+    },
+
+    "navigation": "Навигация",
+    "chat": "Чат",
+
     "title": "Fineas Advisor",
     "language": "Язык",
     "chat_placeholder": "Задавайте любой финансовый вопрос об акциях и вкладах...",
