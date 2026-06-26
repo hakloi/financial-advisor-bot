@@ -2,8 +2,10 @@ import streamlit as st
 from services.language import load_language
 from core.router import route
 from core.state import init_state
+from auth.database import init_db
+from auth.login import show_auth
 
-
+init_db()
 init_state()
 
 st.sidebar.selectbox(
@@ -14,28 +16,12 @@ st.sidebar.selectbox(
 
 t = load_language(st.session_state.lang)
 
+if not st.session_state.get("authenticated"):
+    show_auth(t)
+    st.stop()
+
 
 st.title(t["title"])
-
-
-
-
-# -----------------------
-# CHAT HISTORY
-# -----------------------
-st.write(t["quick_choices"])
-
-col1, col2 = st.columns(2)
-
-quick_message = None  # ✔ ВСЕГДА заранее
-
-with col1:
-    if st.button(t["stocks"]):
-        quick_message = t["stocks"]
-
-with col2:
-    if st.button(t["deposits"]):
-        quick_message = t["deposits"]
 
 
 # -----------------------
@@ -49,10 +35,7 @@ for msg in st.session_state.messages:
 # -----------------------
 # INPUT (safe logic)
 # -----------------------
-if quick_message is not None:
-    user_input = quick_message
-else:
-    user_input = st.chat_input(t["chat_placeholder"])
+user_input = st.chat_input(t["chat_placeholder"])
 
 
 # -----------------------

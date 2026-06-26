@@ -1,9 +1,23 @@
 {
+    "auth": {
+        "login_tab": "Login",
+        "register_tab": "Register",
+
+        "username": "Username",
+        "email": "Email",
+        "password": "Password",
+
+        "login_button": "Login",
+        "register_button": "Sign up",
+
+        "login_error": "Invalid username or password",
+        "user_exists": "Nickname already exists",
+        "email_exists": "This email is already registered",
+        "success_register": "Account created! Now log in."
+    },
+    
     "title": "Fineas Advisor",
     "language": "Language",
-    "quick_choices": "Quick Choices",
-    "stocks": "Stocks",
-    "deposits": "Deposits",
     "chat_placeholder": "Ask me anything about finance, stocks, and deposits...",
     "response": "Request received. Analysis will be added later."
 

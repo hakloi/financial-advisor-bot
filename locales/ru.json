@@ -1,9 +1,23 @@
 {
+    "auth": {
+        "login_tab": "Войти",
+        "register_tab": "Регистрация",
+
+        "username": "Имя пользователя",
+        "email": "Email",
+        "password": "Пароль",
+
+        "login_button": "Войти",
+        "register_button": "Зарегистрироваться",
+
+        "login_error": "Неверный логин или пароль",
+        "user_exists": "Такой никнейм уже существует",
+        "email_exists": "Этот email уже зарегистрирован",
+        "success_register": "Аккаунт создан! Теперь войдите."
+    },
+    
     "title": "Fineas Advisor",
     "language": "Язык",
-    "quick_choices": "Быстрый выбор",
-    "stocks": "Акции",
-    "deposits": "Вклады",
     "chat_placeholder": "Задавайте любой финансовый вопрос об акциях и вкладах...",
     "response": "Запрос получен. Анализ появится позже."
 
