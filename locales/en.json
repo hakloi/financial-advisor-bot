@@ -27,7 +27,22 @@
     },
 
     "settings": {
-        "settings_title": "Settings"
+        "settings_title": "Settings",
+        "current_password_label": "Current Password",
+        "new_password_label": "New Password (leave blank if you don't want to change)"
+    },
+
+    "buttons": {
+        "save_changes": "Save Changes"
+    },
+
+    "errors": {
+        "no_current_password": "Enter your current password to set a new one",
+        "incorrect_password": "Current password is incorrect",
+        "no_changes": "No changes made",
+        "user_not_found": "User not found",
+
+        "saved": "Saved!"
     },
 
     "navigation": "Navigation",

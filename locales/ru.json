@@ -27,7 +27,22 @@
     },
     
     "settings": {
-        "settings_title": "Настройки"
+        "settings_title": "Настройки",
+        "current_password_label": "Текущий пароль",
+        "new_password_label": "Новый пароль (оставьте пустым, если не хотите менять)"
+    },
+
+    "buttons": {
+        "save_changes": "Сохранить изменения"
+    },
+
+    "errors": {
+        "no_current_password": "Введите текущий пароль",
+        "incorrect_password": "Текущий пароль неправильный",
+        "no_changes": "Нет изменений",
+        "user_not_found": "Пользователь не найден",
+
+        "saved": "Сохранено!"
     },
 
     "navigation": "Навигация",
