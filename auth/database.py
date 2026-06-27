@@ -16,9 +16,24 @@ def init_db():
                     username VARCHAR(50) UNIQUE NOT NULL,
                     email VARCHAR(100) UNIQUE NOT NULL,
                     password_hash TEXT NOT NULL,
+                    age INTEGER,
+                    current_savings DECIMAL(15, 2),
+                    currency VARCHAR(3) DEFAULT 'RUB',
+                    risk_level VARCHAR(10) DEFAULT 'medium',
+                    investment_horizon VARCHAR(20),
                     created_at TIMESTAMP DEFAULT NOW()
                 )
             """)
+            # Add columns if they don't exist (for existing databases)
+            migrations = [
+                "ALTER TABLE users ADD COLUMN IF NOT EXISTS age INTEGER",
+                "ALTER TABLE users ADD COLUMN IF NOT EXISTS current_savings DECIMAL(15, 2)",
+                "ALTER TABLE users ADD COLUMN IF NOT EXISTS currency VARCHAR(3) DEFAULT 'RUB'",
+                "ALTER TABLE users ADD COLUMN IF NOT EXISTS risk_level VARCHAR(10) DEFAULT 'medium'",
+                "ALTER TABLE users ADD COLUMN IF NOT EXISTS investment_horizon VARCHAR(20)",
+            ]
+            for migration in migrations:
+                cur.execute(migration)
 
 
 def create_user(username: str, email: str, password_hash: str):
@@ -90,3 +105,33 @@ def update_user(user_id: int, username: str = None, email: str = None, password_
                     (password_hash, user_id)
                 )
     return result
+
+
+def get_profile(user_id: int):
+    with get_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                "SELECT age, current_savings, currency, risk_level, investment_horizon FROM users WHERE id = %s",
+                (user_id,)
+            )
+            row = cur.fetchone()
+            if row:
+                return {
+                    "age": row[0],
+                    "current_savings": row[1],
+                    "currency": row[2],
+                    "risk_level": row[3],
+                    "investment_horizon": row[4]
+                }
+    return None
+
+
+def update_profile(user_id: int, age: int, current_savings: float, currency: str, risk_level: str, investment_horizon: str):
+    with get_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """UPDATE users 
+                   SET age = %s, current_savings = %s, currency = %s, risk_level = %s, investment_horizon = %s
+                   WHERE id = %s""",
+                (age, current_savings, currency, risk_level, investment_horizon, user_id)
+            )

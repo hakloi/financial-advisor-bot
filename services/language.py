@@ -1,8 +1,6 @@
 import json
 
-# Function: Set a language using locale .json
-# Input: lang (str) - The selected language
-# Output: Returns a dictionary with the selected language
+# Set a language using locale .json
 def load_language(lang):
     file = (
         "locales/ru.json"

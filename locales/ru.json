@@ -23,7 +23,20 @@
         "password_label": "Пароль",
         "update_button": "Обновить профиль",
         "update_success": "Профиль успешно обновлен!",
-        "update_error": "Ошибка при обновлении профиля. Попробуйте еще раз."
+        "update_error": "Ошибка при обновлении профиля. Попробуйте еще раз.",
+
+        "welcome_label": "С возвращением",
+        "age_label": "Возраст",
+        "current_savings": "Текущие накопления",
+        "currency_label": "Валюта",
+        "risk": "Уровень риска",
+        "low": "низкий",
+        "medium": "средний",
+        "high": "высокий",
+        "investment_horizon": "Инвестиционный горизонт",
+        "horizon_short": "короткий (< 1 года)",
+        "horizon_medium": "средний (1–5 лет)",
+        "horizon_long": "длинный (5+ лет)"
     },
     
     "settings": {
@@ -33,7 +46,7 @@
     },
 
     "buttons": {
-        "save_changes": "Сохранить изменения"
+        "save_changes": "Сохранить"
     },
 
     "errors": {

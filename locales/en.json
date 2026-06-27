@@ -23,7 +23,20 @@
         "password_label": "Password",
         "update_button": "Update Profile",
         "update_success": "Profile updated successfully!",
-        "update_error": "Error updating profile. Please try again."
+        "update_error": "Error updating profile. Please try again.",
+
+        "welcome_label": "Welcome",
+        "age_label": "Age",
+        "current_savings": "Current savings",
+        "currency_label": "Currency",
+        "risk": "Risk level",
+        "low": "low",
+        "medium":  "medium",
+        "high": "high",
+        "investment_horizon": "Investment horizon",
+        "horizon_short": "short (< 1 year)",
+        "horizon_medium": "medium (1\u20135 years)",
+        "horizon_long": "long (5+ years)"
     },
 
     "settings": {

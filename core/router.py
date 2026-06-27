@@ -1,73 +1,68 @@
-from services.finance import get_stock_info
+import streamlit as st
+from services.llm import ask_llm_stream
+from auth.database import get_user_by_username, get_profile
 
 
-def route(user_input: str, lang: str):
+def _build_system_prompt(lang: str) -> str:
+    username = st.session_state.get("username")
+    user = get_user_by_username(username) if username else None
+    profile = get_profile(user["id"]) if user else None
 
-    text = user_input.lower()
+    profile_section = ""
+    missing = []
 
+    if profile:
+        fields = {
+            "Age": profile.get("age"),
+            "Current savings": profile.get("current_savings"),
+            "Currency": profile.get("currency"),
+            "Risk level": profile.get("risk_level"),
+            "Investment horizon": profile.get("investment_horizon"),
+        }
+        filled = {k: v for k, v in fields.items() if v is not None}
+        missing = [k for k, v in fields.items() if v is None]
 
-    if "акции" in text or "stock" in text:
-
-        return handle_stocks(lang)
-
-
-    if "вклад" in text or "deposit" in text:
-
-        return handle_deposits(lang)
-
-
-    return fallback(lang)
-
-
-
-def handle_stocks(lang):
-
-    ticker = "AAPL"  
-
-    data = get_stock_info(ticker)
-
-    if lang == "English":
-        response = (
-            f"📊 Stock: {ticker}\n"
-            f"Price: {data['last_price']:.2f}\n"
-            f"Volatility: {data['volatility']:.2f}"
-        )
+        if filled:
+            profile_section = "User profile:\n" + "\n".join(f"- {k}: {v}" for k, v in filled.items())
     else:
-        response = (
-            f"📊 Акции: {ticker}\n"
-            f"Цена: {data['last_price']:.2f}\n"
-            f"Волатильность: {data['volatility']:.2f}"
-        )
+        missing = ["age", "current savings", "risk level", "investment horizon"]
 
-    return {
-        "type": "stocks",
-        "response": response
-    }
+    clarify = ""
+    if missing:
+        clarify = f"\nIf relevant, politely ask the user to fill in: {', '.join(missing)}."
 
+    return f"""You are a personal financial assistant.
+Language to respond in: {lang}
+{profile_section}
 
-def handle_deposits(lang):
-
-    if lang == "English":
-        return {
-            "type": "deposits",
-            "response": "💰 Deposit comparison module coming soon"
-        }
-
-    return {
-        "type": "deposits",
-        "response": "💰 Модуль вкладов скоро будет добавлен"
-    }
+Your behavior:
+- Use the user's profile data to personalize answers
+- If profile data is missing, ask the user to fill it in the Profile section
+- Remember the conversation history below
+- Explain financial information clearly
+- Do not provide direct financial advice{clarify}"""
 
 
-def fallback(lang):
+def _build_history() -> str:
+    history = st.session_state.get("chat_history", [])
+    if not history:
+        return ""
+    lines = "\n".join(f"{m['role'].capitalize()}: {m['content']}" for m in history[-10:])
+    return f"\nConversation so far:\n{lines}\n"
 
-    if lang == "English":
-        return {
-            "type": "chat",
-            "response": "I can help with stocks or deposits"
-        }
 
-    return {
-        "type": "chat",
-        "response": "Я могу помочь с акциями или вкладами"
-    }
+def route(message: str, lang: str):
+    system = _build_system_prompt(lang)
+    history = _build_history()
+    prompt = f"{system}{history}\nUser: {message}\nAssistant:"
+
+    # Save to history
+    st.session_state.chat_history.append({"role": "user", "content": message})
+
+    full_response = []
+
+    for chunk in ask_llm_stream(prompt):
+        full_response.append(chunk)
+        yield chunk
+
+    st.session_state.chat_history.append({"role": "assistant", "content": "".join(full_response)})
