@@ -22,6 +22,12 @@ if not st.session_state.get("authenticated"):
     show_auth(t)
     st.stop()
 
+# Load messages after authentication
+if st.session_state.get("authenticated") and "messages" not in st.session_state:
+    from auth.database import load_messages
+    user = get_user_by_username(st.session_state.username)
+    st.session_state.messages = load_messages(user["id"]) if user else []
+
 if st.session_state.get("authenticated"):
     user = get_user_by_username(st.session_state.username)
     avatar_bytes = get_avatar(user["id"]) if user else None
