@@ -31,9 +31,19 @@ def init_db():
                 "ALTER TABLE users ADD COLUMN IF NOT EXISTS currency VARCHAR(3) DEFAULT 'RUB'",
                 "ALTER TABLE users ADD COLUMN IF NOT EXISTS risk_level VARCHAR(10) DEFAULT 'medium'",
                 "ALTER TABLE users ADD COLUMN IF NOT EXISTS investment_horizon VARCHAR(20)",
+                "ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar BYTEA",
             ]
             for migration in migrations:
                 cur.execute(migration)
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS messages (
+                    id SERIAL PRIMARY KEY,
+                    user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+                    role VARCHAR(10) NOT NULL,
+                    content TEXT NOT NULL,
+                    created_at TIMESTAMP DEFAULT NOW()
+                )
+            """)
 
 
 def create_user(username: str, email: str, password_hash: str):
@@ -135,3 +145,42 @@ def update_profile(user_id: int, age: int, current_savings: float, currency: str
                    WHERE id = %s""",
                 (age, current_savings, currency, risk_level, investment_horizon, user_id)
             )
+
+
+def get_avatar(user_id: int):
+    with get_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute("SELECT avatar FROM users WHERE id = %s", (user_id,))
+            row = cur.fetchone()
+            if row and row[0]:
+                return bytes(row[0])
+    return None
+
+
+def update_avatar(user_id: int, avatar_bytes: bytes):
+    with get_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                "UPDATE users SET avatar = %s WHERE id = %s",
+                (psycopg2.Binary(avatar_bytes), user_id)
+            )
+
+
+def save_message(user_id: int, role: str, content: str):
+    with get_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                "INSERT INTO messages (user_id, role, content) VALUES (%s, %s, %s) RETURNING created_at",
+                (user_id, role, content)
+            )
+            return cur.fetchone()[0]
+
+
+def load_messages(user_id: int):
+    with get_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                "SELECT role, content, created_at FROM messages WHERE user_id = %s ORDER BY created_at ASC",
+                (user_id,)
+            )
+            return [{"role": row[0], "content": row[1], "created_at": row[2]} for row in cur.fetchall()]

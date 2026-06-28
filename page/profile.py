@@ -1,5 +1,7 @@
 import streamlit as st
-from auth.database import get_user_by_username, get_profile, update_profile
+from PIL import Image
+import io
+from auth.database import get_user_by_username, get_profile, update_profile, get_avatar, update_avatar
 
 RISK_KEYS = ["low", "medium", "high"]
 HORIZON_KEYS = ["short", "medium", "long"]
@@ -14,9 +16,28 @@ def show_profile(t):
         st.error(t["errors"]["user_not_found"])
         return
 
-    st.subheader(f"{p['welcome_label']}, {user['username']}!")
-    st.divider()
+    # avatar upload and display
+    col1, col2 = st.columns([1, 3])
+    with col1:
+        avatar_bytes = get_avatar(user["id"])
+        if avatar_bytes:
+            st.image(Image.open(io.BytesIO(avatar_bytes)), width=100)
+        else:
+            st.markdown("## 👤")
 
+    with col2:
+        uploaded = st.file_uploader("", type=["png", "jpg", "jpeg"], label_visibility="collapsed")
+        if uploaded:
+            img = Image.open(uploaded).convert("RGB")
+            img.thumbnail((256, 256))
+            buf = io.BytesIO()
+            img.save(buf, format="PNG")
+            update_avatar(user["id"], buf.getvalue())
+            st.rerun()
+
+    st.subheader(f"{p['welcome_label']}, {user['username']}!")
+
+    # profile form
     profile = get_profile(user["id"])
 
     risk_labels = [p["low"], p["medium"], p["high"]]
@@ -53,9 +74,7 @@ def show_profile(t):
         )
 
         if st.form_submit_button(t["buttons"]["save_changes"]):
-            # Save fixed keys to DB, not translated labels
             risk_key = RISK_KEYS[risk_labels.index(risk_index)]
             horizon_key = HORIZON_KEYS[horizon_labels.index(horizon_index)]
             update_profile(user["id"], age, current_savings, currency, risk_key, horizon_key)
             st.success(t["errors"]["saved"])
-            # st.rerun()

@@ -1,10 +1,8 @@
 import streamlit as st
 from services.language import load_language
-
 from core.state import init_state
-from auth.database import init_db
+from auth.database import init_db, get_user_by_username, get_avatar
 from auth.login import show_auth
-
 from page.profile import show_profile
 from page.settings import show_settings
 from page.chat import show_chat
@@ -25,7 +23,16 @@ if not st.session_state.get("authenticated"):
     st.stop()
 
 if st.session_state.get("authenticated"):
+    user = get_user_by_username(st.session_state.username)
+    avatar_bytes = get_avatar(user["id"]) if user else None
+
     page = st.sidebar.radio(t["navigation"], [t["chat"], t["profile"]["profile_title"], t["settings"]["settings_title"]])
+
+    st.sidebar.divider()
+    if st.sidebar.button(t["logout"], use_container_width=True):
+        for key in list(st.session_state.keys()):
+            del st.session_state[key]
+        st.rerun()
 
     if page == t["profile"]["profile_title"]:
         show_profile(t)

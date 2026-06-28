@@ -15,8 +15,6 @@ def show_settings(t):
         new_username = st.text_input(t["profile"]["username_label"], value=user["username"])
         new_email = st.text_input(t["profile"]["email_label"], value=user["email"])
 
-        st.divider()
-
         current_password = st.text_input(t["settings"]["current_password_label"], type="password")
         new_password = st.text_input(t["settings"]["new_password_label"], type="password")
 
