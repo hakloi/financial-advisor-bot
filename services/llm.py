@@ -9,7 +9,14 @@ def ask_llm_stream(prompt: str):
     try:
         response = requests.post(
             f"{OLLAMA_HOST}/api/generate",
-            json={"model": MODEL, "prompt": prompt, "stream": True},
+            json={
+                "model": MODEL,
+                "prompt": prompt,
+                "stream": True,
+                "options": {
+                    "stop": ["User:", "\nUser", "Human:", "\nHuman"]
+                }
+            },
             stream=True,
             timeout=60
         )

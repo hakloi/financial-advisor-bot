@@ -38,9 +38,9 @@ Language to respond in: {lang}
 Your behavior:
 - Use the user's profile data to personalize answers
 - If profile data is missing, ask the user to fill it in the Profile section
-- Remember the conversation history below
 - Explain financial information clearly
-- Do not provide direct financial advice{clarify}"""
+- Do not provide direct financial advice
+- Reply ONLY as the assistant. Do not write "User:" or simulate user messages.{clarify}"""
 
 
 def _build_history() -> str:
