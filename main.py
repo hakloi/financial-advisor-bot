@@ -1,0 +1,25 @@
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+from auth.database import init_db
+from api.routers import auth, users, chat
+
+app = FastAPI(title="Financial Advisor API")
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+init_db()
+
+app.include_router(auth.router, prefix="/auth", tags=["auth"])
+app.include_router(users.router, prefix="/users", tags=["users"])
+app.include_router(chat.router, prefix="/chat", tags=["chat"])
+
+
+@app.get("/health")
+def health():
+    return {"status": "ok"}
