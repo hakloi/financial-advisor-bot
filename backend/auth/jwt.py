@@ -1,5 +1,5 @@
 import os
-import PyJWT as jwt
+import jwt
 from datetime import datetime, timedelta, timezone
 from fastapi import Depends, HTTPException, status # FastAPI classes for handling dependencies, HTTP exceptions, and status codes
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials # FastAPI classes for implementing HTTP Bearer authentication and handling authorization credentials
