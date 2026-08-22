@@ -1,12 +1,14 @@
-import psycopg2
-from psycopg2.errors import UniqueViolation
-from auth.config import DB_CONFIG
+import psycopg2 # Library for connecting to and interacting with PostgreSQL databases
+from psycopg2.errors import UniqueViolation # Error class for handling unique constraint violations in PostgreSQL
+from backend.auth.config import DB_CONFIG # Importing database configuration settings from the config module
 
 
+# Function to establish a connection to the PostgreSQL database using the configuration settings
 def get_connection():
     return psycopg2.connect(**DB_CONFIG)
 
 
+# Function to initialize the database by creating necessary tables and columns if they do not already exist
 def init_db():
     with get_connection() as conn:
         with conn.cursor() as cur:
@@ -46,6 +48,7 @@ def init_db():
             """)
 
 
+# Function to create a new user in the database with the provided username, email, and password hash
 def create_user(username: str, email: str, password_hash: str):
     try:
         with get_connection() as conn:
@@ -86,6 +89,7 @@ def get_user_by_email(email: str):
     return None
 
 
+# Function to update user information in the database, allowing changes to username, email, and password hash while ensuring uniqueness constraints are maintained
 def update_user(user_id: int, username: str = None, email: str = None, password_hash: str = None):
     result = True
     existing_user = get_user_by_username(username) if username else None
@@ -117,6 +121,7 @@ def update_user(user_id: int, username: str = None, email: str = None, password_
     return result
 
 
+# Function to retrieve a user's profile information from the database, including age, current savings, currency, risk level, and investment horizon
 def get_profile(user_id: int):
     with get_connection() as conn:
         with conn.cursor() as cur:
@@ -136,6 +141,7 @@ def get_profile(user_id: int):
     return None
 
 
+# Function to update a user's profile information in the database, allowing changes to age, current savings, currency, risk level, and investment horizon
 def update_profile(user_id: int, age: int, current_savings: float, currency: str, risk_level: str, investment_horizon: str):
     with get_connection() as conn:
         with conn.cursor() as cur:
@@ -147,6 +153,7 @@ def update_profile(user_id: int, age: int, current_savings: float, currency: str
             )
 
 
+# Function to retrieve a user's avatar image from the database, returning the image as bytes if it exists, or None if no avatar is found
 def get_avatar(user_id: int):
     with get_connection() as conn:
         with conn.cursor() as cur:
@@ -157,6 +164,7 @@ def get_avatar(user_id: int):
     return None
 
 
+# Function to update a user's avatar image in the database, saving the provided image bytes as a PNG image associated with the user's ID
 def update_avatar(user_id: int, avatar_bytes: bytes):
     with get_connection() as conn:
         with conn.cursor() as cur:
@@ -166,6 +174,7 @@ def update_avatar(user_id: int, avatar_bytes: bytes):
             )
 
 
+# Function to save a message associated with a user in the database, storing the user's ID, role (e.g., user or assistant), and message content, and returning the timestamp of when the message was created
 def save_message(user_id: int, role: str, content: str):
     with get_connection() as conn:
         with conn.cursor() as cur:
@@ -176,6 +185,7 @@ def save_message(user_id: int, role: str, content: str):
             return cur.fetchone()[0]
 
 
+# Function to load all messages associated with a user from the database, retrieving the role, content, and creation timestamp of each message in chronological order
 def load_messages(user_id: int):
     with get_connection() as conn:
         with conn.cursor() as cur:

@@ -1,7 +1,8 @@
+from backend.api.routers import auth, chat
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from auth.database import init_db
-from api.routers import auth, users, chat
+from backend.auth.database import init_db
+from backend.api.routers import users
 
 app = FastAPI(title="Financial Advisor API")
 
