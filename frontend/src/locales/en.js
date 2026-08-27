@@ -1,8 +1,12 @@
 export default {
   nav_chat: 'Chat',
+  nav_home: 'Home',
   nav_profile: 'Profile',
   nav_settings: 'Settings',
   logout: 'Log out',
+  home_welcome: 'Welcome',
+  home_user: 'there',
+  home_message: "I'm Fina, your Financial Assistant!",
 
   chat_placeholder: 'Ask me anything about finance...',
   chat_send: 'Send',
@@ -21,6 +25,8 @@ export default {
   profile_save: 'Save',
   profile_saved: 'Saved!',
   profile_change_avatar: 'Change avatar',
+  profile_delete_avatar: 'Delete avatar',
+  profile_registered: 'Registered',
   profile_risk_low: 'Low',
   profile_risk_medium: 'Medium',
   profile_risk_high: 'High',
@@ -38,7 +44,7 @@ export default {
   auth_username: 'Username',
   auth_email: 'Email',
   auth_password: 'Password',
-  auth_created: 'Account created! Please log in.',
+  auth_created: 'Account created! Check your email and confirm it before logging in.',
 
   loading: 'Loading...',
 }

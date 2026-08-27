@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { api } from '../api'
 
@@ -7,6 +7,19 @@ export default function Auth() {
   const [form, setForm] = useState({ username: '', email: '', password: '' })
   const [error, setError] = useState('')
   const navigate = useNavigate()
+  const confirmationRequested = useRef(false)
+
+  useEffect(() => {
+    const token = new URLSearchParams(window.location.search).get('token')
+    if (!token || confirmationRequested.current) return
+    confirmationRequested.current = true
+
+    api.confirmEmail(token).then(async (res) => {
+      const data = await res.json()
+      setError(res.ok ? data.detail : data.detail || 'Confirmation link is invalid or expired')
+      if (res.ok) setTab('login')
+    }).catch(() => setError('Could not confirm email'))
+  }, [])
 
   const set = (field) => (e) => setForm({ ...form, [field]: e.target.value })
 
@@ -27,7 +40,7 @@ export default function Auth() {
     const data = await res.json()
     if (!res.ok) return setError(data.detail)
     setTab('login')
-    setError('Account created! Please log in.')
+    setError('Account created! Check your email and confirm it before logging in.')
   }
 
   return (

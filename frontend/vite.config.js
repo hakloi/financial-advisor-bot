@@ -5,10 +5,11 @@ export default defineConfig({
   plugins: [react()],
   server: {
     proxy: {
-      '/auth': 'http://localhost:8000',
-      '/users': 'http://localhost:8000',
-      '/chat/send': 'http://localhost:8000',
-      '/chat/history': 'http://localhost:8000',
+      '/auth': 'http://api:8000',
+      '/users': 'http://api:8000',
+      '/chat/send': 'http://api:8000',
+      '/chat/history': 'http://api:8000',
+      '/chat/messages': 'http://api:8000',
     }
   }
 })

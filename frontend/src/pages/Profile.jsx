@@ -1,10 +1,12 @@
-import { useState, useEffect } from 'react'
+import { useRef, useState, useEffect } from 'react'
 import { api } from '../api'
+import defaultAvatar from '../assets/anon-icon.jpg'
 
 export default function Profile({ t }) {
   const [profile, setProfile] = useState(null)
   const [saved, setSaved] = useState(false)
   const [avatarUrl, setAvatarUrl] = useState(null)
+  const avatarInput = useRef(null)
 
   const loadAvatar = () => {
     fetch('/users/avatar', {
@@ -41,6 +43,11 @@ export default function Profile({ t }) {
     loadAvatar()
   }
 
+  const handleDeleteAvatar = async () => {
+    const res = await api.deleteAvatar()
+    if (res.ok) setAvatarUrl(null)
+  }
+
   const set = (field) => (e) => setProfile({ ...profile, [field]: e.target.value })
 
   if (!profile) return <p style={{ padding: 32 }}>{t.loading}</p>
@@ -50,15 +57,21 @@ export default function Profile({ t }) {
       <div className="page-inner">
         <h2>{t.profile_title}</h2>
 
-        <div className="avatar-section">
-          {avatarUrl && <img src={avatarUrl} alt="avatar" className="avatar" />}
-          <label className="avatar-upload">
-            {t.profile_change_avatar}
-            <input type="file" accept="image/*" onChange={handleAvatar} hidden />
-          </label>
+        <div className="profile-heading">
+          <p className="username">@{profile.username}</p>
+          <p className="registration-date">{t.profile_registered}: {new Date(profile.created_at).toLocaleDateString()}</p>
         </div>
 
-        <p className="username">@{profile.username}</p>
+        <div className="avatar-section">
+          <img src={avatarUrl || defaultAvatar} alt="avatar" className="avatar" />
+          <div className="avatar-actions">
+            <button type="button" className="avatar-button avatar-upload" onClick={() => avatarInput.current?.click()}>
+              {t.profile_change_avatar}
+            </button>
+            <input ref={avatarInput} type="file" accept="image/*" onChange={handleAvatar} hidden />
+            {avatarUrl && <button type="button" className="avatar-button avatar-delete" onClick={handleDeleteAvatar}>{t.profile_delete_avatar}</button>}
+          </div>
+        </div>
 
         <form onSubmit={handleSubmit}>
           <label>{t.profile_age}

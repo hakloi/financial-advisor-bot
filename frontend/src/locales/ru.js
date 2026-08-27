@@ -1,8 +1,12 @@
 export default {
   nav_chat: 'Чат',
+  nav_home: 'Главная',
   nav_profile: 'Профиль',
   nav_settings: 'Настройки',
   logout: 'Выйти',
+  home_welcome: 'Добро пожаловать',
+  home_user: 'пользователь',
+  home_message: 'Я Fina, ваш финансовый помощник!',
 
   chat_placeholder: 'Спросите что-нибудь о финансах...',
   chat_send: 'Отправить',
@@ -21,6 +25,8 @@ export default {
   profile_save: 'Сохранить',
   profile_saved: 'Сохранено!',
   profile_change_avatar: 'Сменить аватар',
+  profile_delete_avatar: 'Удалить аватар',
+  profile_registered: 'Дата регистрации',
   profile_risk_low: 'Низкий',
   profile_risk_medium: 'Средний',
   profile_risk_high: 'Высокий',
@@ -38,7 +44,7 @@ export default {
   auth_username: 'Имя пользователя',
   auth_email: 'Электронная почта',
   auth_password: 'Пароль',
-  auth_created: 'Аккаунт создан! Войдите.',
+  auth_created: 'Аккаунт создан! Подтвердите email перед входом.',
 
   loading: 'Загрузка...',
 }

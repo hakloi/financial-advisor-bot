@@ -51,6 +51,7 @@ class AccountUpdate(BaseModel):
 
 # Class representing a message response from the chatbot, including the role of the sender, the content of the message, and the timestamp of when it was created
 class MessageResponse(BaseModel):
+    id: int
     role: str
     content: str
     created_at: datetime

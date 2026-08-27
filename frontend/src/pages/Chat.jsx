@@ -29,6 +29,15 @@ export default function Chat({ lang, t }) {
 
   const formatTime = (ts) => new Date(ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
 
+  const copyMessage = async (content) => {
+    await navigator.clipboard.writeText(content)
+  }
+
+  const removeMessage = async (messageId) => {
+    const res = await api.deleteMessage(messageId)
+    if (res.ok) setMessages(prev => prev.filter(message => message.id !== messageId))
+  }
+
   const sendMessage = async (e) => {
     e.preventDefault()
     if (!input.trim() || loading) return
@@ -40,12 +49,30 @@ export default function Chat({ lang, t }) {
     setThinking(true)
 
     const res = await api.sendMessage(input, lang)
+    const userMessageId = Number(res.headers.get('X-User-Message-ID'))
+    if (userMessageId > 0) {
+      setMessages(prev => prev.map((message, index) =>
+        index === prev.length - 1 ? { ...message, id: userMessageId } : message
+      ))
+    }
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}))
+      setMessages(prev => [...prev, {
+        role: 'assistant',
+        content: data.detail || 'The assistant is temporarily unavailable.',
+        created_at: new Date().toISOString(),
+      }])
+      setLoading(false)
+      setThinking(false)
+      return
+    }
     const reader = res.body.getReader()
     const decoder = new TextDecoder()
 
     let botContent = ''
     let firstChunk = true
     const botTs = new Date().toISOString()
+    const assistantMessageId = Number(res.headers.get('X-Assistant-Message-ID'))
 
     while (true) {
       const { done, value } = await reader.read()
@@ -55,7 +82,7 @@ export default function Chat({ lang, t }) {
       if (firstChunk) {
         firstChunk = false
         setThinking(false)
-        setMessages(prev => [...prev, { role: 'assistant', content: botContent, created_at: botTs }])
+        setMessages(prev => [...prev, { id: assistantMessageId, role: 'assistant', content: botContent, created_at: botTs }])
       } else {
         setMessages(prev => prev.map((m, i) =>
           i === prev.length - 1 ? { ...m, content: botContent } : m
@@ -78,15 +105,21 @@ export default function Chat({ lang, t }) {
           if (showDate) lastDate = msgDate
 
           return (
-            <>
+            <div key={msg.id || `${msg.role}-${i}`}>
               {showDate && <div className="date-separator">{msgDate}</div>}
-              <div key={i} className={`message-row ${msg.role}`}>
+              <div className={`message-row ${msg.role}`}>
                 <div className={`message ${msg.role}`}>
                   <div className="content">{msg.content}</div>
+                  {msg.id && (
+                    <div className="message-actions">
+                      <button type="button" onClick={() => copyMessage(msg.content)}>Copy</button>
+                      <button type="button" onClick={() => removeMessage(msg.id)}>Delete</button>
+                    </div>
+                  )}
                   {msg.created_at && <div className="time">{formatTime(msg.created_at)}</div>}
                 </div>
               </div>
-            </>
+            </div>
           )
         })}
 

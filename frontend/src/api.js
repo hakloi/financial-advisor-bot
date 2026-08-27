@@ -20,6 +20,9 @@ export const api = {
       body: JSON.stringify({ username, password })
     }),
 
+  confirmEmail: (token) =>
+    fetch(`${BASE}/auth/confirm?token=${encodeURIComponent(token)}`),
+
   getProfile: () =>
     fetch(`${BASE}/users/profile`, { headers: authHeaders() }),
 
@@ -49,8 +52,20 @@ export const api = {
     })
   },
 
+  deleteAvatar: () =>
+    fetch(`${BASE}/users/avatar`, {
+      method: 'DELETE',
+      headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` },
+    }),
+
   getHistory: () =>
     fetch(`${BASE}/chat/history`, { headers: authHeaders() }),
+
+  deleteMessage: (messageId) =>
+    fetch(`${BASE}/chat/messages/${messageId}`, {
+      method: 'DELETE',
+      headers: authHeaders(),
+    }),
 
   sendMessage: (message, lang) =>
     fetch(`${BASE}/chat/send`, {

@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, UploadFile, File # Librar
 from PIL import Image # Library for image processing, used to handle avatar images
 import io # Library for handling input/output operations, used to manage image data in memory
 from backend.api.schemas.schemas import ProfileUpdate, AccountUpdate # Pydantic models for validating and managing user profile and account update requests
-from backend.auth.database import get_profile, update_profile, get_avatar, update_avatar, update_user, get_user_by_username # Database functions for retrieving and updating user profile, avatar, and account information
+from backend.auth.database import get_profile, update_profile, get_avatar, update_avatar, delete_avatar, update_user, get_user_by_username # Database functions for retrieving and updating user profile, avatar, and account information
 from backend.auth.hash import hash_password, verify_password # Functions for hashing and verifying passwords
 from backend.auth.jwt import get_current_user # Dependency function to get the current authenticated user
 
@@ -13,7 +13,7 @@ router = APIRouter() # Class used to group related API routes together
 @router.get("/profile")
 def get_user_profile(current_user=Depends(get_current_user)):
     profile = get_profile(current_user["id"])
-    return {"username": current_user["username"], **(profile or {})}
+    return profile or {"username": current_user["username"]}
 
 
 # Route for updating the user's profile information, which allows the user to modify their age, current savings, currency, risk level, and investment horizon
@@ -72,3 +72,9 @@ def upload_avatar(file: UploadFile = File(...), current_user=Depends(get_current
     img.save(buf, format="PNG")
     update_avatar(current_user["id"], buf.getvalue())
     return {"detail": "Avatar updated"}
+
+
+@router.delete("/avatar")
+def delete_user_avatar(current_user=Depends(get_current_user)):
+    delete_avatar(current_user["id"])
+    return {"detail": "Avatar deleted"}

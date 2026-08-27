@@ -1,4 +1,5 @@
 import os # Library for interacting with the operating system
+from datetime import datetime
 import psycopg2 # Library for connecting to PostgreSQL databases
 from psycopg2.errors import UniqueViolation # Exception for handling unique constraint violations
 from dotenv import load_dotenv # Library for loading environment variables from a .env file
@@ -31,6 +32,9 @@ def init_db():
                     username VARCHAR(50) UNIQUE NOT NULL,
                     email VARCHAR(100) UNIQUE NOT NULL,
                     password_hash TEXT NOT NULL,
+                    email_verified BOOLEAN NOT NULL DEFAULT FALSE,
+                    confirmation_token_hash TEXT,
+                    confirmation_token_expires_at TIMESTAMPTZ,
                     age INTEGER,
                     current_savings DECIMAL(15, 2),
                     currency VARCHAR(3) DEFAULT 'RUB',
@@ -40,6 +44,9 @@ def init_db():
                     created_at TIMESTAMP DEFAULT NOW()
                 )
             """)
+            cur.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS email_verified BOOLEAN NOT NULL DEFAULT FALSE")
+            cur.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS confirmation_token_hash TEXT")
+            cur.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS confirmation_token_expires_at TIMESTAMPTZ")
             cur.execute("""
                 CREATE TABLE IF NOT EXISTS messages (
                     id SERIAL PRIMARY KEY,
@@ -52,13 +59,21 @@ def init_db():
 
 
 # Function to create a new user in the database
-def create_user(username: str, email: str, password_hash: str):
+def create_user(
+    username: str,
+    email: str,
+    password_hash: str,
+    confirmation_token_hash: str,
+    confirmation_token_expires_at: datetime,
+):
     try:
         with get_connection() as conn:
             with conn.cursor() as cur:
                 cur.execute(
-                    "INSERT INTO users (username, email, password_hash) VALUES (%s, %s, %s)",
-                    (username, email, password_hash)
+                          """INSERT INTO users
+                              (username, email, password_hash, confirmation_token_hash, confirmation_token_expires_at)
+                              VALUES (%s, %s, %s, %s, %s)""",
+                          (username, email, password_hash, confirmation_token_hash, confirmation_token_expires_at)
                 )
         return True
     except UniqueViolation:
@@ -70,11 +85,11 @@ def get_user_by_username(username: str):
     with get_connection() as conn:
         with conn.cursor() as cur:
             cur.execute(
-                "SELECT id, username, email, password_hash FROM users WHERE username = %s",
+                "SELECT id, username, email, password_hash, email_verified FROM users WHERE username = %s",
                 (username,)
             )
             row = cur.fetchone()
-            return {"id": row[0], "username": row[1], "email": row[2], "password_hash": row[3]} if row else None
+            return {"id": row[0], "username": row[1], "email": row[2], "password_hash": row[3], "email_verified": row[4]} if row else None
 
 
 # Function to retrieve a user from the database by their email
@@ -114,19 +129,39 @@ def get_profile(user_id: int):
     with get_connection() as conn:
         with conn.cursor() as cur:
             cur.execute(
-                "SELECT age, current_savings, currency, risk_level, investment_horizon FROM users WHERE id = %s",
+                """SELECT username, created_at, age, current_savings, currency,
+                          risk_level, investment_horizon
+                   FROM users WHERE id = %s""",
                 (user_id,)
             )
             row = cur.fetchone()
             if row:
                 return {
-                    "age": row[0],
-                    "current_savings": row[1],
-                    "currency": row[2],
-                    "risk_level": row[3],
-                    "investment_horizon": row[4]
+                    "username": row[0],
+                    "created_at": row[1],
+                    "age": row[2],
+                    "current_savings": row[3],
+                    "currency": row[4],
+                    "risk_level": row[5],
+                    "investment_horizon": row[6]
                 }
     return None
+
+
+def confirm_user_email(token_hash: str):
+    with get_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """UPDATE users
+                   SET email_verified = TRUE,
+                       confirmation_token_hash = NULL,
+                       confirmation_token_expires_at = NULL
+                   WHERE confirmation_token_hash = %s
+                     AND confirmation_token_expires_at > NOW()
+                   RETURNING id""",
+                (token_hash,),
+            )
+            return cur.fetchone() is not None
 
 
 # Function to update a user's profile information in the database
@@ -159,14 +194,21 @@ def update_avatar(user_id: int, avatar_bytes: bytes):
             )
 
 
+def delete_avatar(user_id: int):
+    with get_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute("UPDATE users SET avatar = NULL WHERE id = %s", (user_id,))
+
+
 # Function to save a message in the database
 def save_message(user_id: int, role: str, content: str):
     with get_connection() as conn:
         with conn.cursor() as cur:
             cur.execute(
-                "INSERT INTO messages (user_id, role, content) VALUES (%s, %s, %s)",
+                "INSERT INTO messages (user_id, role, content) VALUES (%s, %s, %s) RETURNING id",
                 (user_id, role, content)
             )
+            return cur.fetchone()[0]
 
 
 # Function to load messages for a user from the database
@@ -174,7 +216,17 @@ def load_messages(user_id: int):
     with get_connection() as conn:
         with conn.cursor() as cur:
             cur.execute(
-                "SELECT role, content, created_at FROM messages WHERE user_id = %s ORDER BY created_at ASC",
+                "SELECT id, role, content, created_at FROM messages WHERE user_id = %s ORDER BY created_at ASC, id ASC",
                 (user_id,)
             )
-            return [{"role": r[0], "content": r[1], "created_at": r[2]} for r in cur.fetchall()]
+            return [{"id": r[0], "role": r[1], "content": r[2], "created_at": r[3]} for r in cur.fetchall()]
+
+
+def delete_message(user_id: int, message_id: int):
+    with get_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                "DELETE FROM messages WHERE id = %s AND user_id = %s RETURNING id",
+                (message_id, user_id),
+            )
+            return cur.fetchone() is not None

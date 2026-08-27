@@ -35,7 +35,7 @@ export default function Settings({ t }) {
     <div className="page-container">
       <div className="page-inner">
         <h2>{t.settings_title}</h2>
-        <form onSubmit={handleSubmit}>
+        <form onSubmit={handleSubmit} autoComplete="off">
           <label>{t.settings_username}
             <input value={form.username} onChange={set('username')} />
           </label>
@@ -43,10 +43,10 @@ export default function Settings({ t }) {
             <input type="email" value={form.email} onChange={set('email')} />
           </label>
           <label>{t.settings_current_password}
-            <input type="password" value={form.current_password} onChange={set('current_password')} />
+            <input type="password" autoComplete="new-password" value={form.current_password} onChange={set('current_password')} />
           </label>
           <label>{t.settings_new_password}
-            <input type="password" value={form.new_password} onChange={set('new_password')} />
+            <input type="password" autoComplete="new-password" value={form.new_password} onChange={set('new_password')} />
           </label>
           <button type="submit">{t.settings_save}</button>
           {error && <p className="error">{error}</p>}
