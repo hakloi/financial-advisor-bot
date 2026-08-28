@@ -1,4 +1,4 @@
-from database.connection import get_connection
+from backend.auth.database import get_connection
 
 
 # Create the market_data table if it does not exist
@@ -61,4 +61,37 @@ def save_market_data(data: list[dict]):
                     )
                     ON CONFLICT (secid, board_id, trade_date)
                     DO NOTHING
-                """)
+                """, row)
+
+
+def get_latest_market_context(limit: int = 30) -> list[dict]:
+    with get_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """SELECT secid, board_id, trade_date, open_price,
+                          high_price, low_price, close_price, volume, value, num_trades
+                   FROM market_data
+                   WHERE (secid, board_id, trade_date) IN (
+                       SELECT secid, board_id, MAX(trade_date)
+                       FROM market_data
+                       GROUP BY secid, board_id
+                   )
+                   ORDER BY secid
+                   LIMIT %s""",
+                (limit,),
+            )
+            return [
+                {
+                    "ticker": row[0],
+                    "board": row[1],
+                    "trade_date": row[2].isoformat() if row[2] else None,
+                    "open": row[3],
+                    "high": row[4],
+                    "low": row[5],
+                    "close": row[6],
+                    "volume": row[7],
+                    "value": row[8],
+                    "trades": row[9],
+                }
+                for row in cur.fetchall()
+            ]

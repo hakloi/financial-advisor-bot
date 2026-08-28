@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { api } from '../api'
+import { api, readResponse } from '../api'
 
 export default function Auth() {
   const [tab, setTab] = useState('login')
@@ -15,10 +15,10 @@ export default function Auth() {
     confirmationRequested.current = true
 
     api.confirmEmail(token).then(async (res) => {
-      const data = await res.json()
-      setError(res.ok ? data.detail : data.detail || 'Confirmation link is invalid or expired')
-      if (res.ok) setTab('login')
-    }).catch(() => setError('Could not confirm email'))
+      const data = await readResponse(res)
+      setError(data.detail)
+      setTab('login')
+    }).catch((error) => setError(error.message || 'Could not confirm email'))
   }, [])
 
   const set = (field) => (e) => setForm({ ...form, [field]: e.target.value })
@@ -26,21 +26,25 @@ export default function Auth() {
   const handleLogin = async (e) => {
     e.preventDefault()
     setError('')
-    const res = await api.login(form.username, form.password)
-    const data = await res.json()
-    if (!res.ok) return setError(data.detail)
-    localStorage.setItem('token', data.access_token)
-    navigate('/chat')
+    try {
+      const data = await readResponse(await api.login(form.username, form.password))
+      localStorage.setItem('token', data.access_token)
+      navigate('/chat')
+    } catch (error) {
+      setError(error.message)
+    }
   }
 
   const handleRegister = async (e) => {
     e.preventDefault()
     setError('')
-    const res = await api.register(form.username, form.email, form.password)
-    const data = await res.json()
-    if (!res.ok) return setError(data.detail)
-    setTab('login')
-    setError('Account created! Check your email and confirm it before logging in.')
+    try {
+      await readResponse(await api.register(form.username, form.email, form.password))
+      setTab('login')
+      setError('Account created! Check your email and confirm it before logging in.')
+    } catch (error) {
+      setError(error.message)
+    }
   }
 
   return (

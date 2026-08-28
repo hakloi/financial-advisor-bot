@@ -21,7 +21,8 @@ def get_historical_data(
     params = {
         "start": 0,
         "limit": limit,
-        board_id: board_id
+        "sort_order": "desc",
+        "boardid": board_id,
     }
 
     if start_date:

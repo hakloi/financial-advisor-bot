@@ -1,4 +1,4 @@
-from database.connection import get_connection
+from backend.auth.database import get_connection
 
 
 # Create the securities table if it does not exist
@@ -28,7 +28,6 @@ def init_securities_table():
 def save_securities(securities: list[dict]):
     with get_connection() as conn:
         with conn.cursor() as cur:
-
             for security in securities:
                 cur.execute("""
                     INSERT INTO securities (
@@ -72,4 +71,29 @@ def save_securities(securities: list[dict]):
                         list_level = EXCLUDED.list_level,
                         sector_id = EXCLUDED.sector_id,
                         updated_at = NOW()
-                """)
+                    """, security)
+
+
+def get_securities_context(limit: int = 30) -> list[dict]:
+    with get_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """SELECT secid, shortname, secname, board_id, currency,
+                          list_level, updated_at
+                   FROM securities
+                   ORDER BY shortname NULLS LAST
+                   LIMIT %s""",
+                (limit,),
+            )
+            return [
+                {
+                    "ticker": row[0],
+                    "short_name": row[1],
+                    "name": row[2],
+                    "board": row[3],
+                    "currency": row[4],
+                    "listing_level": row[5],
+                    "updated_at": row[6].isoformat() if row[6] else None,
+                }
+                for row in cur.fetchall()
+            ]

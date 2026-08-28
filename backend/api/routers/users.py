@@ -1,12 +1,30 @@
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File # Libraries for building API routes, handling dependencies, raising HTTP exceptions, and managing file uploads
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Query # Libraries for building API routes, handling dependencies, raising HTTP exceptions, and managing file uploads
 from PIL import Image # Library for image processing, used to handle avatar images
 import io # Library for handling input/output operations, used to manage image data in memory
-from backend.api.schemas.schemas import ProfileUpdate, AccountUpdate # Pydantic models for validating and managing user profile and account update requests
-from backend.auth.database import get_profile, update_profile, get_avatar, update_avatar, delete_avatar, update_user, get_user_by_username # Database functions for retrieving and updating user profile, avatar, and account information
+from backend.api.schemas.schemas import ProfileUpdate, AccountUpdate, TransactionCreate, TransactionResponse # Pydantic models for validating and managing user profile, account, and transaction requests
+from backend.auth.database import get_profile, update_profile, get_avatar, update_avatar, delete_avatar, update_user, get_user_by_id, create_transaction, load_transactions # Database functions for retrieving and updating user data
 from backend.auth.hash import hash_password, verify_password # Functions for hashing and verifying passwords
 from backend.auth.jwt import get_current_user # Dependency function to get the current authenticated user
 
 router = APIRouter() # Class used to group related API routes together
+
+
+@router.get("/transactions", response_model=list[TransactionResponse])
+def get_user_transactions(
+    year: int = Query(..., ge=2000, le=2100),
+    month: int = Query(..., ge=1, le=12),
+    current_user=Depends(get_current_user),
+):
+    return load_transactions(current_user["id"], year, month)
+
+
+@router.post("/transactions", response_model=TransactionResponse, status_code=201)
+def add_user_transaction(body: TransactionCreate, current_user=Depends(get_current_user)):
+    if body.kind not in {"income", "expense"}:
+        raise HTTPException(status_code=400, detail="Transaction type must be income or expense")
+    if body.amount <= 0:
+        raise HTTPException(status_code=400, detail="Amount must be greater than zero")
+    return create_transaction(current_user["id"], body.entry_date, body.kind, body.amount, body.description)
 
 
 ## Route for retrieving the user's profile information, which returns the user's username and profile data (age, current savings, currency, risk level, investment horizon)
@@ -30,7 +48,9 @@ def update_user_profile(body: ProfileUpdate, current_user=Depends(get_current_us
 # Route for updating the user's account information, which allows the user to change their username, email, and password (with verification of the current password)
 @router.put("/account")
 def update_account(body: AccountUpdate, current_user=Depends(get_current_user)):
-    user = get_user_by_username(current_user["username"])
+    user = get_user_by_id(current_user["id"])
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
 
     kwargs = {}
     if body.username:

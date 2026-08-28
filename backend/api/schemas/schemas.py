@@ -1,6 +1,6 @@
 from pydantic import BaseModel, EmailStr # Library used for data validation and settings management
 from typing import Optional # Library used for type hinting and optional values
-from datetime import datetime # Library used for working with dates and times
+from datetime import date, datetime # Library used for working with dates and times
 from enum import Enum # Library used for creating enumerations
 
 
@@ -47,6 +47,21 @@ class AccountUpdate(BaseModel):
     email: Optional[EmailStr] = None
     current_password: Optional[str] = None
     new_password: Optional[str] = None
+
+
+class TransactionCreate(BaseModel):
+    entry_date: date
+    kind: str
+    amount: float
+    description: Optional[str] = None
+
+
+class TransactionResponse(BaseModel):
+    id: int
+    entry_date: date
+    kind: str
+    amount: float
+    description: Optional[str] = None
 
 
 # Class representing a message response from the chatbot, including the role of the sender, the content of the message, and the timestamp of when it was created

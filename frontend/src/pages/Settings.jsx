@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { api } from '../api'
+import { api, readResponse } from '../api'
 
 export default function Settings({ t }) {
   const [form, setForm] = useState({ username: '', email: '', current_password: '', new_password: '' })
@@ -7,9 +7,10 @@ export default function Settings({ t }) {
   const [success, setSuccess] = useState('')
 
   useEffect(() => {
-    api.getProfile().then(r => r.json()).then(data => {
-      setForm(f => ({ ...f, username: data.username, email: data.email }))
-    })
+    api.getProfile()
+      .then(readResponse)
+      .then(data => setForm(f => ({ ...f, username: data.username, email: data.email })))
+      .catch(error => setError(error.message))
   }, [])
 
   const set = (field) => (e) => setForm({ ...form, [field]: e.target.value })
@@ -19,16 +20,18 @@ export default function Settings({ t }) {
     setError('')
     setSuccess('')
 
-    const res = await api.updateAccount({
-      username: form.username || undefined,
-      email: form.email || undefined,
-      current_password: form.current_password || undefined,
-      new_password: form.new_password || undefined,
-    })
-    const data = await res.json()
-    if (!res.ok) return setError(data.detail)
-    setSuccess(t.settings_saved)
-    setForm(f => ({ ...f, current_password: '', new_password: '' }))
+    try {
+      await readResponse(await api.updateAccount({
+        username: form.username || undefined,
+        email: form.email || undefined,
+        current_password: form.current_password || undefined,
+        new_password: form.new_password || undefined,
+      }))
+      setSuccess(t.settings_saved)
+      setForm(f => ({ ...f, current_password: '', new_password: '' }))
+    } catch (error) {
+      setError(error.message)
+    }
   }
 
   return (

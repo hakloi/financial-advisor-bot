@@ -1,11 +1,12 @@
 import { useRef, useState, useEffect } from 'react'
-import { api } from '../api'
+import { api, readResponse } from '../api'
 import defaultAvatar from '../assets/anon-icon.jpg'
 
 export default function Profile({ t }) {
   const [profile, setProfile] = useState(null)
   const [saved, setSaved] = useState(false)
   const [avatarUrl, setAvatarUrl] = useState(null)
+  const [error, setError] = useState('')
   const avatarInput = useRef(null)
 
   const loadAvatar = () => {
@@ -13,39 +14,49 @@ export default function Profile({ t }) {
       headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
     }).then(r => {
       if (r.ok) return r.blob()
+      throw new Error('Could not load avatar')
     }).then(blob => {
       if (blob) setAvatarUrl(URL.createObjectURL(blob))
-    })
+    }).catch(error => setError(error.message))
   }
 
   useEffect(() => {
-    api.getProfile().then(r => r.json()).then(setProfile)
+    api.getProfile().then(readResponse).then(setProfile).catch(error => setError(error.message))
     loadAvatar()
   }, [])
 
   const handleSubmit = async (e) => {
     e.preventDefault()
-    await api.updateProfile({
-      age: profile.age,
-      current_savings: profile.current_savings,
-      currency: profile.currency,
-      risk_level: profile.risk_level,
-      investment_horizon: profile.investment_horizon,
-    })
-    setSaved(true)
-    setTimeout(() => setSaved(false), 2000)
+    try {
+      await readResponse(await api.updateProfile({
+        age: profile.age,
+        current_savings: profile.current_savings,
+        currency: profile.currency,
+        risk_level: profile.risk_level,
+        investment_horizon: profile.investment_horizon,
+      }))
+      setSaved(true)
+      setTimeout(() => setSaved(false), 2000)
+    } catch (error) {
+      setError(error.message)
+    }
   }
 
   const handleAvatar = async (e) => {
     const file = e.target.files[0]
     if (!file) return
-    await api.uploadAvatar(file)
-    loadAvatar()
+    try {
+      await readResponse(await api.uploadAvatar(file))
+      loadAvatar()
+    } catch (error) {
+      setError(error.message)
+    }
   }
 
   const handleDeleteAvatar = async () => {
     const res = await api.deleteAvatar()
     if (res.ok) setAvatarUrl(null)
+    else setError((await res.json().catch(() => ({}))).detail || 'Could not delete avatar')
   }
 
   const set = (field) => (e) => setProfile({ ...profile, [field]: e.target.value })
@@ -56,6 +67,7 @@ export default function Profile({ t }) {
     <div className="page-container">
       <div className="page-inner">
         <h2>{t.profile_title}</h2>
+        {error && <p className="error">{error}</p>}
 
         <div className="profile-heading">
           <p className="username">@{profile.username}</p>

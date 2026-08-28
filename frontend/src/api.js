@@ -5,6 +5,12 @@ const authHeaders = () => ({
   'Authorization': `Bearer ${localStorage.getItem('token')}`
 })
 
+export const readResponse = async (response) => {
+  const data = await response.json().catch(() => ({}))
+  if (!response.ok) throw new Error(data.detail || 'Request failed')
+  return data
+}
+
 export const api = {
   register: (username, email, password) =>
     fetch(`${BASE}/auth/register`, {
@@ -25,6 +31,16 @@ export const api = {
 
   getProfile: () =>
     fetch(`${BASE}/users/profile`, { headers: authHeaders() }),
+
+  getTransactions: (year, month) =>
+    fetch(`${BASE}/users/transactions?year=${year}&month=${month}`, { headers: authHeaders() }),
+
+  addTransaction: (data) =>
+    fetch(`${BASE}/users/transactions`, {
+      method: 'POST',
+      headers: authHeaders(),
+      body: JSON.stringify(data)
+    }),
 
   updateProfile: (data) =>
     fetch(`${BASE}/users/profile`, {

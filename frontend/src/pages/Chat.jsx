@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { api } from '../api'
+import { api, readResponse } from '../api'
 
 export default function Chat({ lang, t }) {
   const [messages, setMessages] = useState([])
@@ -9,9 +9,9 @@ export default function Chat({ lang, t }) {
   const bottomRef = useRef(null)
 
   useEffect(() => {
-    api.getHistory().then(r => r.json()).then(data => {
+    api.getHistory().then(readResponse).then(data => {
       if (Array.isArray(data)) setMessages(data)
-    })
+    }).catch(error => setMessages([{ role: 'assistant', content: error.message, created_at: new Date().toISOString() }]))
   }, [])
 
   useEffect(() => {
@@ -34,8 +34,13 @@ export default function Chat({ lang, t }) {
   }
 
   const removeMessage = async (messageId) => {
-    const res = await api.deleteMessage(messageId)
-    if (res.ok) setMessages(prev => prev.filter(message => message.id !== messageId))
+    try {
+      const res = await api.deleteMessage(messageId)
+      if (res.ok) setMessages(prev => prev.filter(message => message.id !== messageId))
+      else throw new Error((await res.json().catch(() => ({}))).detail || 'Could not delete message')
+    } catch (error) {
+      setMessages(prev => [...prev, { role: 'assistant', content: error.message, created_at: new Date().toISOString() }])
+    }
   }
 
   const sendMessage = async (e) => {
@@ -48,7 +53,15 @@ export default function Chat({ lang, t }) {
     setLoading(true)
     setThinking(true)
 
-    const res = await api.sendMessage(input, lang)
+    let res
+    try {
+      res = await api.sendMessage(input, lang)
+    } catch (error) {
+      setMessages(prev => [...prev, { role: 'assistant', content: error.message, created_at: new Date().toISOString() }])
+      setLoading(false)
+      setThinking(false)
+      return
+    }
     const userMessageId = Number(res.headers.get('X-User-Message-ID'))
     if (userMessageId > 0) {
       setMessages(prev => prev.map((message, index) =>
@@ -74,35 +87,39 @@ export default function Chat({ lang, t }) {
     const botTs = new Date().toISOString()
     const assistantMessageId = Number(res.headers.get('X-Assistant-Message-ID'))
 
-    while (true) {
-      const { done, value } = await reader.read()
-      if (done) break
-      botContent += decoder.decode(value)
+    try {
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+        botContent += decoder.decode(value)
 
-      if (firstChunk) {
-        firstChunk = false
-        setThinking(false)
-        setMessages(prev => [...prev, { id: assistantMessageId, role: 'assistant', content: botContent, created_at: botTs }])
-      } else {
-        setMessages(prev => prev.map((m, i) =>
-          i === prev.length - 1 ? { ...m, content: botContent } : m
-        ))
+        if (firstChunk) {
+          firstChunk = false
+          setThinking(false)
+          setMessages(prev => [...prev, { id: assistantMessageId, role: 'assistant', content: botContent, created_at: botTs }])
+        } else {
+          setMessages(prev => prev.map((m, i) =>
+            i === prev.length - 1 ? { ...m, content: botContent } : m
+          ))
+        }
       }
+    } catch (error) {
+      setMessages(prev => [...prev, { role: 'assistant', content: error.message, created_at: new Date().toISOString() }])
     }
 
     setLoading(false)
     setThinking(false)
   }
 
-  let lastDate = null
-
   return (
     <div className="chat-container">
       <div className="messages">
         {messages.map((msg, i) => {
           const msgDate = msg.created_at ? formatDate(msg.created_at) : null
-          const showDate = msgDate && msgDate !== lastDate
-          if (showDate) lastDate = msgDate
+          const previousDate = i > 0 && messages[i - 1].created_at
+            ? formatDate(messages[i - 1].created_at)
+            : null
+          const showDate = msgDate && msgDate !== previousDate
 
           return (
             <div key={msg.id || `${msg.role}-${i}`}>

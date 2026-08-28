@@ -56,6 +56,17 @@ def init_db():
                     created_at TIMESTAMP DEFAULT NOW()
                 )
             """)
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS transactions (
+                    id SERIAL PRIMARY KEY,
+                    user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+                    entry_date DATE NOT NULL,
+                    kind VARCHAR(10) NOT NULL CHECK (kind IN ('income', 'expense')),
+                    amount NUMERIC(15, 2) NOT NULL CHECK (amount > 0),
+                    description VARCHAR(200),
+                    created_at TIMESTAMP DEFAULT NOW()
+                )
+            """)
 
 
 # Function to create a new user in the database
@@ -104,6 +115,17 @@ def get_user_by_email(email: str):
             return {"id": row[0], "username": row[1], "email": row[2], "password_hash": row[3]} if row else None
 
 
+def get_user_by_id(user_id: int):
+    with get_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                "SELECT id, username, email, password_hash, email_verified FROM users WHERE id = %s",
+                (user_id,)
+            )
+            row = cur.fetchone()
+            return {"id": row[0], "username": row[1], "email": row[2], "password_hash": row[3], "email_verified": row[4]} if row else None
+
+
 # Function to update user information in the database
 def update_user(user_id: int, username: str = None, email: str = None, password_hash: str = None):
     existing_user = get_user_by_username(username) if username else None
@@ -129,7 +151,7 @@ def get_profile(user_id: int):
     with get_connection() as conn:
         with conn.cursor() as cur:
             cur.execute(
-                """SELECT username, created_at, age, current_savings, currency,
+                """SELECT username, email, created_at, age, current_savings, currency,
                           risk_level, investment_horizon
                    FROM users WHERE id = %s""",
                 (user_id,)
@@ -138,12 +160,13 @@ def get_profile(user_id: int):
             if row:
                 return {
                     "username": row[0],
-                    "created_at": row[1],
-                    "age": row[2],
-                    "current_savings": row[3],
-                    "currency": row[4],
-                    "risk_level": row[5],
-                    "investment_horizon": row[6]
+                    "email": row[1],
+                    "created_at": row[2],
+                    "age": row[3],
+                    "current_savings": row[4],
+                    "currency": row[5],
+                    "risk_level": row[6],
+                    "investment_horizon": row[7]
                 }
     return None
 
@@ -230,3 +253,45 @@ def delete_message(user_id: int, message_id: int):
                 (message_id, user_id),
             )
             return cur.fetchone() is not None
+
+
+def create_transaction(user_id: int, entry_date, kind: str, amount: float, description: str | None):
+    with get_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """INSERT INTO transactions (user_id, entry_date, kind, amount, description)
+                   VALUES (%s, %s, %s, %s, %s)
+                   RETURNING id, entry_date, kind, amount, description""",
+                (user_id, entry_date, kind, amount, description),
+            )
+            row = cur.fetchone()
+            return {
+                "id": row[0],
+                "entry_date": row[1],
+                "kind": row[2],
+                "amount": float(row[3]),
+                "description": row[4],
+            }
+
+
+def load_transactions(user_id: int, year: int, month: int):
+    with get_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """SELECT id, entry_date, kind, amount, description
+                   FROM transactions
+                   WHERE user_id = %s AND EXTRACT(YEAR FROM entry_date) = %s
+                     AND EXTRACT(MONTH FROM entry_date) = %s
+                   ORDER BY entry_date, id""",
+                (user_id, year, month),
+            )
+            return [
+                {
+                    "id": row[0],
+                    "entry_date": row[1],
+                    "kind": row[2],
+                    "amount": float(row[3]),
+                    "description": row[4],
+                }
+                for row in cur.fetchall()
+            ]

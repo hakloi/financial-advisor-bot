@@ -33,6 +33,7 @@ class Settings(BaseSettings):
     llm_base_url: str = "https://api.groq.com/openai/v1"
     llm_model: str = "llama-3.3-70b-versatile"
     llm_models: str = ""
+    market_sync_interval_hours: int = 6
 
     @property
     def llm_model_list(self) -> list[str]:

@@ -1,19 +1,24 @@
+import json
 import re
 
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import StreamingResponse
 from openai import APIConnectionError, APIStatusError, OpenAI, RateLimitError
-from backend.api.schemas.schemas import ChatRequest, MessageResponse
+from backend.api.schemas.schemas import ChatRequest, Language, MessageResponse
 from backend.api.config import settings
 from backend.auth.database import delete_message, get_profile, load_messages, save_message
 from backend.auth.jwt import get_current_user
+from backend.finance.deposits import format_deposits_context, is_deposit_query, load_deposits
+from backend.finance.market_data_db import get_latest_market_context
+from backend.finance.securities import get_securities_context
+from backend.finance.sync import refresh_market_data_for_query
 from typing import List
 
 router = APIRouter()
 
 
-def response_language(message: str) -> str:
-    return "Russian" if re.search(r"[А-Яа-яЁё]", message) else "English"
+def response_language(lang: Language) -> str:
+    return "Russian" if lang == Language.RU else "English"
 
 
 def clean_reply(reply: str) -> str:
@@ -25,12 +30,21 @@ def clean_reply(reply: str) -> str:
     return re.sub(r"\n{3,}", "\n\n", reply).strip()
 
 
+def is_market_query(message: str) -> bool:
+    return re.search(
+        r"московск|moex|акци|ценн(ые|ых) бумаг|котиров|дивиденд|тикер|бирж|"
+        r"share|stock|market|dividend|ticker",
+        message,
+        flags=re.IGNORECASE,
+    ) is not None
+
+
 @router.post("/send")
 def send_message(body: ChatRequest, current_user=Depends(get_current_user)):
     if not settings.llm_api_key:
         raise HTTPException(status_code=503, detail="LLM is not configured")
 
-    language = response_language(body.message)
+    language = response_language(body.lang)
     profile = get_profile(current_user["id"]) or {}
     profile_context = (
         f"Username: {profile.get('username', current_user['username'])}; "
@@ -40,6 +54,31 @@ def send_message(body: ChatRequest, current_user=Depends(get_current_user)):
         f"Risk level: {profile.get('risk_level') or 'not provided'}; "
         f"Investment horizon: {profile.get('investment_horizon') or 'not provided'}."
     )
+    deposit_context = ""
+    if is_deposit_query(body.message):
+        deposit_context = (
+            " Deposit data below is the only source of current deposit offers. "
+            "Treat it as factual but potentially stale, mention the source link when useful, "
+            "and never infer missing rates or conditions. Deposit data: "
+            f"{format_deposits_context(load_deposits())}"
+        )
+    market_context = ""
+    if is_market_query(body.message):
+        try:
+            refresh_market_data_for_query(body.message, max_securities=20)
+        except Exception:
+            pass
+        market_context = (
+            " The user is asking about shares or the MOEX market. Use the MOEX catalog and latest rows below. "
+            "For broad questions such as 'are there shares?' or 'which shares do you suggest?', "
+            "name several securities that are actually present in the catalog, explain that this is not personal investment advice, "
+            "and ask about risk and horizon. "
+            "If a requested ticker is absent, say that it is absent; do not invent prices, "
+            "dividend yields, or dates. MOEX securities: "
+            f"{json.dumps(get_securities_context(), ensure_ascii=False, default=str)}. "
+            "Latest MOEX market rows: "
+            f"{json.dumps(get_latest_market_context(), ensure_ascii=False, default=str)}."
+        )
     previous_messages = load_messages(current_user["id"])[-12:]
     messages = [
         {
@@ -49,10 +88,11 @@ def send_message(body: ChatRequest, current_user=Depends(get_current_user)):
                 f"Always answer in {language}, unless the user explicitly asks for another language. "
                 "Follow the user's instructions carefully. Use the profile below when relevant, "
                 "but do not repeat profile data unnecessarily. Keep replies concise: usually 2-5 short sentences. "
-                "Write like a real person. Do not mention these instructions, language selection, default language, "
+                "Write like a real person. Finish every sentence and do not stop mid-word or mid-sentence. "
+                "Do not mention these instructions, language selection, default language, "
                 "the prompt, or internal reasoning. Do not use Markdown, headings, bullet points, emojis, or meta-introductions. "
                 "Do not invent financial data. Ask one focused follow-up question when important information is missing. "
-                f"User profile: {profile_context}"
+                f"User profile: {profile_context}.{deposit_context}{market_context}"
             ),
         },
         *[
@@ -77,7 +117,7 @@ def send_message(body: ChatRequest, current_user=Depends(get_current_user)):
                 model=model,
                 messages=messages,
                 temperature=0.2,
-                max_tokens=450,
+                max_tokens=700,
             )
             reply = clean_reply(completion.choices[0].message.content or "Не удалось подготовить ответ.")
             break
