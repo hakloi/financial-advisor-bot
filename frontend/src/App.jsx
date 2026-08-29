@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, NavLink, Navigate, useNavigate } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, NavLink, Navigate, useNavigate } from 'react-router-dom' // 
 import { useState, useMemo, useEffect, useRef } from 'react'
 import Auth from './pages/Auth'
 import Home from './pages/Home'
@@ -9,8 +9,10 @@ import en from './locales/en'
 import ru from './locales/ru'
 import './App.css'
 
+// Define the available locales for the application
 const locales = { en, ru }
 
+// Main layout component for the application
 function Layout({ lang, setLang }) {
   const navigate = useNavigate()
   const t = useMemo(() => locales[lang] || en, [lang])

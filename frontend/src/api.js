@@ -42,6 +42,19 @@ export const api = {
       body: JSON.stringify(data)
     }),
 
+  updateTransaction: (transactionId, data) =>
+    fetch(`${BASE}/users/transactions/${transactionId}`, {
+      method: 'PUT',
+      headers: authHeaders(),
+      body: JSON.stringify(data)
+    }),
+
+  deleteTransaction: (transactionId) =>
+    fetch(`${BASE}/users/transactions/${transactionId}`, {
+      method: 'DELETE',
+      headers: authHeaders(),
+    }),
+
   updateProfile: (data) =>
     fetch(`${BASE}/users/profile`, {
       method: 'PUT',

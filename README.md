@@ -94,6 +94,21 @@ cd ..
 python -m unittest discover -s tests -v
 ```
 
+## Importing the bundled finance history
+
+After the user has registered, import `finance_3_months.csv` by passing that
+user's database ID. Each non-zero income and expense value becomes a separate
+transaction owned by that user. The operation is idempotent, so it can be run
+again without duplicating the imported data.
+
+```powershell
+python import_transactions.py --user-id 1
+```
+
+The imported May--July 2026 records are available on the Home page through the
+month navigation controls. The API always filters them to the authenticated
+user, so another account cannot retrieve them.
+
 ## API routes
 
 - `POST /auth/register`, `POST /auth/login`, `GET /auth/confirm`

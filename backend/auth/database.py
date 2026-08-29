@@ -7,14 +7,35 @@ from dotenv import load_dotenv # Library for loading environment variables from 
 # Load environment variables from a .env file
 load_dotenv()
 
+
+def resolve_db_config(host=None, port=None, dbname=None, user=None, password=None):
+    """Return a DB config that works both inside Docker and when running on the host machine."""
+    resolved_host = host if host is not None else os.getenv("DB_HOST", "localhost")
+    resolved_port = port if port is not None else os.getenv("DB_PORT", "5432")
+    resolved_dbname = dbname if dbname is not None else os.getenv("DB_NAME", "fina_db")
+    resolved_user = user if user is not None else os.getenv("DB_USER", "fina_user")
+    resolved_password = password if password is not None else os.getenv("DB_PASSWORD", "fina_password")
+
+    if resolved_host == "db" and not os.path.exists("/proc/1/cgroup"):
+        return {
+            "host": "localhost",
+            "port": "5433" if resolved_port == "5432" else resolved_port,
+            "dbname": resolved_dbname,
+            "user": resolved_user,
+            "password": resolved_password,
+        }
+
+    return {
+        "host": resolved_host,
+        "port": resolved_port,
+        "dbname": resolved_dbname,
+        "user": resolved_user,
+        "password": resolved_password,
+    }
+
+
 # Database configuration using environment variables with default values
-DB_CONFIG = {
-    "host": os.getenv("DB_HOST", "localhost"),
-    "port": os.getenv("DB_PORT", "5432"),
-    "dbname": os.getenv("DB_NAME", "fina_db"),
-    "user": os.getenv("DB_USER", "fina_user"),
-    "password": os.getenv("DB_PASSWORD", "fina_password"),
-}
+DB_CONFIG = resolve_db_config()
 
 
 # Function to establish a connection to the PostgreSQL database
@@ -63,10 +84,23 @@ def init_db():
                     entry_date DATE NOT NULL,
                     kind VARCHAR(10) NOT NULL CHECK (kind IN ('income', 'expense')),
                     amount NUMERIC(15, 2) NOT NULL CHECK (amount > 0),
+                    currency VARCHAR(3) NOT NULL DEFAULT 'RUB',
+                    category VARCHAR(50),
                     description VARCHAR(200),
+                    source_key VARCHAR(64),
                     created_at TIMESTAMP DEFAULT NOW()
                 )
             """)
+            # These ALTER statements keep installations created before the
+            # transaction import feature compatible with the current schema.
+            cur.execute("ALTER TABLE transactions ADD COLUMN IF NOT EXISTS currency VARCHAR(3) NOT NULL DEFAULT 'RUB'")
+            cur.execute("ALTER TABLE transactions ADD COLUMN IF NOT EXISTS category VARCHAR(50)")
+            cur.execute("ALTER TABLE transactions ADD COLUMN IF NOT EXISTS source_key VARCHAR(64)")
+            cur.execute(
+                """CREATE UNIQUE INDEX IF NOT EXISTS transactions_user_source_key_idx
+                   ON transactions (user_id, source_key)
+                   WHERE source_key IS NOT NULL"""
+            )
 
 
 # Function to create a new user in the database
@@ -255,14 +289,23 @@ def delete_message(user_id: int, message_id: int):
             return cur.fetchone() is not None
 
 
-def create_transaction(user_id: int, entry_date, kind: str, amount: float, description: str | None):
+def create_transaction(
+    user_id: int,
+    entry_date,
+    kind: str,
+    amount: float,
+    description: str | None,
+    currency: str = "RUB",
+    category: str | None = None,
+):
     with get_connection() as conn:
         with conn.cursor() as cur:
             cur.execute(
-                """INSERT INTO transactions (user_id, entry_date, kind, amount, description)
-                   VALUES (%s, %s, %s, %s, %s)
-                   RETURNING id, entry_date, kind, amount, description""",
-                (user_id, entry_date, kind, amount, description),
+                """INSERT INTO transactions
+                   (user_id, entry_date, kind, amount, currency, category, description)
+                   VALUES (%s, %s, %s, %s, %s, %s, %s)
+                   RETURNING id, entry_date, kind, amount, currency, category, description""",
+                (user_id, entry_date, kind, amount, currency, category, description),
             )
             row = cur.fetchone()
             return {
@@ -270,15 +313,65 @@ def create_transaction(user_id: int, entry_date, kind: str, amount: float, descr
                 "entry_date": row[1],
                 "kind": row[2],
                 "amount": float(row[3]),
-                "description": row[4],
+                "currency": row[4],
+                "category": row[5],
+                "description": row[6],
             }
+
+
+def update_transaction(
+    user_id: int,
+    transaction_id: int,
+    entry_date,
+    kind: str,
+    amount: float,
+    description: str | None,
+    currency: str = "RUB",
+    category: str | None = None,
+):
+    with get_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """UPDATE transactions
+                   SET entry_date = %s,
+                       kind = %s,
+                       amount = %s,
+                       currency = %s,
+                       category = %s,
+                       description = %s
+                   WHERE id = %s AND user_id = %s
+                   RETURNING id, entry_date, kind, amount, currency, category, description""",
+                (entry_date, kind, amount, currency, category, description, transaction_id, user_id),
+            )
+            row = cur.fetchone()
+            if row is None:
+                raise ValueError("Transaction not found")
+            return {
+                "id": row[0],
+                "entry_date": row[1],
+                "kind": row[2],
+                "amount": float(row[3]),
+                "currency": row[4],
+                "category": row[5],
+                "description": row[6],
+            }
+
+
+def delete_transaction(user_id: int, transaction_id: int):
+    with get_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                "DELETE FROM transactions WHERE id = %s AND user_id = %s RETURNING id",
+                (transaction_id, user_id),
+            )
+            return cur.fetchone() is not None
 
 
 def load_transactions(user_id: int, year: int, month: int):
     with get_connection() as conn:
         with conn.cursor() as cur:
             cur.execute(
-                """SELECT id, entry_date, kind, amount, description
+                """SELECT id, entry_date, kind, amount, currency, category, description
                    FROM transactions
                    WHERE user_id = %s AND EXTRACT(YEAR FROM entry_date) = %s
                      AND EXTRACT(MONTH FROM entry_date) = %s
@@ -291,7 +384,9 @@ def load_transactions(user_id: int, year: int, month: int):
                     "entry_date": row[1],
                     "kind": row[2],
                     "amount": float(row[3]),
-                    "description": row[4],
+                    "currency": row[4],
+                    "category": row[5],
+                    "description": row[6],
                 }
                 for row in cur.fetchall()
             ]

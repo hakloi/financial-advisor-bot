@@ -1,4 +1,4 @@
-from pydantic import BaseModel, EmailStr # Library used for data validation and settings management
+from pydantic import BaseModel, EmailStr, Field # Library used for data validation and settings management
 from typing import Optional # Library used for type hinting and optional values
 from datetime import date, datetime # Library used for working with dates and times
 from enum import Enum # Library used for creating enumerations
@@ -53,7 +53,9 @@ class TransactionCreate(BaseModel):
     entry_date: date
     kind: str
     amount: float
-    description: Optional[str] = None
+    currency: str = Field(default="RUB", min_length=3, max_length=3)
+    category: Optional[str] = Field(default=None, max_length=50)
+    description: Optional[str] = Field(default=None, max_length=200)
 
 
 class TransactionResponse(BaseModel):
@@ -61,6 +63,8 @@ class TransactionResponse(BaseModel):
     entry_date: date
     kind: str
     amount: float
+    currency: str
+    category: Optional[str] = None
     description: Optional[str] = None
 
 

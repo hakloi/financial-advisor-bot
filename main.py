@@ -1,10 +1,9 @@
-from backend.api.routers import auth, chat
-from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
-from backend.auth.database import init_db
-from backend.api.routers import users
-from backend.finance.market_data_db import init_market_data_table
-from backend.finance.securities import init_securities_table
+from backend.api.routers import auth, chat, users  # Import APIRouters
+from fastapi import FastAPI #  web framework for building APIs with Python
+from fastapi.middleware.cors import CORSMiddleware # a component of middleware to secure connection between frontend and backend
+from backend.auth.database import init_db # Import of database initialization 
+from backend.finance.market_data_db import init_market_data_table # Initialization of historical market data table
+from backend.finance.securities import init_securities_table  # Initialization of securities (shares) table
 
 # Create FastAPI app
 app = FastAPI(title="Fina - Financial Advisor Chatbot", version="1.0.0")
@@ -18,9 +17,11 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Initialize database and tables (securities, market data, and user's income/expenses)
 init_db()
 init_securities_table()
 init_market_data_table()
+##!!!!!!!!!!!!!
 
 # Include routers 
 app.include_router(auth.router, prefix="/auth", tags=["auth"])

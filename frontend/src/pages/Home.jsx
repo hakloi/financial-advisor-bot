@@ -1,6 +1,11 @@
 import { useEffect, useMemo, useState } from 'react'
 import { api, readResponse } from '../api'
 
+const CATEGORY_OPTIONS = {
+  income: ['Salary', 'Freelance', 'Business', 'Gift', 'Interest', 'Other'],
+  expense: ['Housing', 'Food', 'Transport', 'Shopping', 'Health', 'Entertainment', 'Utilities', 'Travel', 'Other'],
+}
+
 export default function Home({ t }) {
   const [username, setUsername] = useState('')
   const [error, setError] = useState('')
@@ -8,7 +13,8 @@ export default function Home({ t }) {
   const [period, setPeriod] = useState({ year: now.getFullYear(), month: now.getMonth() })
   const [transactions, setTransactions] = useState([])
   const [selectedDay, setSelectedDay] = useState(null)
-  const [form, setForm] = useState({ kind: 'expense', amount: '', description: '' })
+  const [editingTransactionId, setEditingTransactionId] = useState(null)
+  const [form, setForm] = useState({ kind: 'expense', amount: '', description: '', category: '' })
   const [saving, setSaving] = useState(false)
 
   const days = useMemo(() => {
@@ -28,6 +34,16 @@ export default function Home({ t }) {
     })
     return totals
   }, [days, transactions])
+
+  const totalIncome = useMemo(
+    () => transactions.filter(item => item.kind === 'income').reduce((sum, item) => sum + Number(item.amount), 0),
+    [transactions]
+  )
+
+  const totalExpense = useMemo(
+    () => transactions.filter(item => item.kind === 'expense').reduce((sum, item) => sum + Number(item.amount), 0),
+    [transactions]
+  )
 
   const maxAmount = Math.max(
     1,
@@ -57,10 +73,38 @@ export default function Home({ t }) {
       .catch(error => setError(error.message))
   }, [period])
 
+  const dayTransactions = useMemo(() => {
+    if (selectedDay === null) return []
+    const selectedDate = `${period.year}-${String(period.month + 1).padStart(2, '0')}-${String(selectedDay).padStart(2, '0')}`
+    return transactions
+      .filter(item => item.entry_date === selectedDate)
+      .sort((a, b) => a.id - b.id)
+  }, [selectedDay, period, transactions])
+
   const openEntry = (day) => {
     setSelectedDay(day)
-    setForm({ kind: 'expense', amount: '', description: '' })
+    setEditingTransactionId(null)
+    setForm({ kind: 'expense', amount: '', description: '', category: 'Housing' })
   }
+
+  const startEditTransaction = (transaction) => {
+    setSelectedDay(Number(transaction.entry_date.slice(8, 10)))
+    setEditingTransactionId(transaction.id)
+    setForm({
+      kind: transaction.kind,
+      amount: String(transaction.amount),
+      description: transaction.description || '',
+      category: transaction.category || '',
+    })
+  }
+
+  const closeEntryPanel = () => {
+    setSelectedDay(null)
+    setEditingTransactionId(null)
+    setForm({ kind: 'expense', amount: '', description: '', category: 'Housing' })
+  }
+
+  const selectedCategoryOptions = CATEGORY_OPTIONS[form.kind] || CATEGORY_OPTIONS.expense
 
   const saveEntry = async (event) => {
     event.preventDefault()
@@ -68,18 +112,47 @@ export default function Home({ t }) {
     setError('')
     try {
       const entryDate = `${period.year}-${String(period.month + 1).padStart(2, '0')}-${String(selectedDay).padStart(2, '0')}`
-      const transaction = await readResponse(await api.addTransaction({
+      const payload = {
         entry_date: entryDate,
         kind: form.kind,
         amount: Number(form.amount),
+        currency: 'RUB',
+        category: form.category || undefined,
         description: form.description || undefined,
-      }))
-      setTransactions(current => [...current, transaction])
-      setSelectedDay(null)
+      }
+
+      const transaction = editingTransactionId
+        ? await readResponse(await api.updateTransaction(editingTransactionId, payload))
+        : await readResponse(await api.addTransaction(payload))
+
+      setTransactions(current => {
+        if (editingTransactionId) {
+          return current.map(item => (item.id === transaction.id ? transaction : item))
+        }
+        return [...current, transaction]
+      })
+      closeEntryPanel()
     } catch (error) {
       setError(error.message)
     } finally {
       setSaving(false)
+    }
+  }
+
+  const removeTransaction = async (transactionId) => {
+    setError('')
+    try {
+      const response = await api.deleteTransaction(transactionId)
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}))
+        throw new Error(data.detail || 'Delete failed')
+      }
+      setTransactions(current => current.filter(item => item.id !== transactionId))
+      if (dayTransactions.length <= 1) {
+        closeEntryPanel()
+      }
+    } catch (error) {
+      setError(error.message)
     }
   }
 
@@ -102,43 +175,95 @@ export default function Home({ t }) {
               <button type="button" onClick={() => changeMonth(1)} aria-label={t.home_next_month}>→</button>
             </div>
           </div>
+          <div className="finance-summary">
+            <div className="summary-pill income-pill">
+              <span className="summary-label">{t.home_income}</span>
+              <strong>{totalIncome.toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ₽</strong>
+            </div>
+            <div className="summary-pill expense-pill">
+              <span className="summary-label">{t.home_expenses}</span>
+              <strong>{totalExpense.toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ₽</strong>
+            </div>
+          </div>
           <div className="finance-legend">
             <span><i className="legend-income" />{t.home_income}</span>
             <span><i className="legend-expense" />{t.home_expenses}</span>
           </div>
-          <div className="bar-chart">
-            {days.map(day => {
-              const total = dailyTotals[day]
-              return (
-                <div className="bar-day" key={day}>
-                  <div className="bars" title={`${day}: ${total.income} / ${total.expense}`}>
-                    <span className="bar income" style={{ height: `${total.income / maxAmount * 100}%` }} />
-                    <span className="bar expense" style={{ height: `${total.expense / maxAmount * 100}%` }} />
+          <div className="bar-chart-wrap">
+            <div className="bar-chart">
+              {days.map(day => {
+                const total = dailyTotals[day]
+                return (
+                  <div className="bar-day" key={day}>
+                    <div className="day-values">
+                      {total.income > 0 && <span className="day-value income-value">{Math.round(total.income)}</span>}
+                      {total.expense > 0 && <span className="day-value expense-value">{Math.round(total.expense)}</span>}
+                    </div>
+                    <div className="bars" title={`${day}: ${total.income} / ${total.expense}`}>
+                      <span className="bar income" style={{ height: `${total.income / maxAmount * 100}%` }} />
+                      <span className="bar expense" style={{ height: `${total.expense / maxAmount * 100}%` }} />
+                    </div>
+                    <span className="day-number">{day}</span>
+                    <button type="button" className="add-entry" onClick={() => openEntry(day)} aria-label={`${t.home_add} ${day}`}>
+                      +
+                    </button>
                   </div>
-                  <span className="day-number">{day}</span>
-                  <button type="button" className="add-entry" onClick={() => openEntry(day)} aria-label={`${t.home_add} ${day}`}>
-                    +
-                  </button>
-                </div>
-              )
-            })}
+                )
+              })}
+            </div>
           </div>
           {selectedDay && (
-            <form className="transaction-form" onSubmit={saveEntry}>
-              <div className="transaction-form-title">
-                <strong>{t.home_add} {selectedDay} {monthLabel}</strong>
-                <button type="button" onClick={() => setSelectedDay(null)} aria-label={t.home_cancel}>×</button>
+            <div className="transaction-panel">
+              <div className="transaction-panel-header">
+                <strong>{selectedDay} {monthLabel}</strong>
+                <button type="button" onClick={closeEntryPanel} aria-label={t.home_cancel}>×</button>
               </div>
-              <div className="transaction-fields">
-                <select value={form.kind} onChange={event => setForm({ ...form, kind: event.target.value })}>
-                  <option value="expense">{t.home_expense}</option>
-                  <option value="income">{t.home_income}</option>
-                </select>
-                <input type="number" min="0.01" step="0.01" placeholder={t.home_amount} value={form.amount} onChange={event => setForm({ ...form, amount: event.target.value })} required />
-                <input type="text" maxLength="200" placeholder={t.home_note} value={form.description} onChange={event => setForm({ ...form, description: event.target.value })} />
-                <button type="submit" disabled={saving}>{saving ? t.home_saving : t.home_save}</button>
-              </div>
-            </form>
+
+              {dayTransactions.length > 0 && (
+                <div className="day-transactions-list">
+                  {dayTransactions.map(transaction => (
+                    <div key={transaction.id} className="day-transaction-item">
+                      <div className="day-transaction-main">
+                        <span className={`transaction-kind ${transaction.kind}`}>{transaction.kind}</span>
+                        <span className="transaction-amount">{Number(transaction.amount).toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ₽</span>
+                      </div>
+                      <div className="day-transaction-meta">
+                        {transaction.category && <span>{transaction.category}</span>}
+                        {transaction.description && <span>{transaction.description}</span>}
+                      </div>
+                      <div className="day-transaction-actions">
+                        <button type="button" className="mini-button edit" onClick={() => startEditTransaction(transaction)}>Edit</button>
+                        <button type="button" className="mini-button delete" onClick={() => removeTransaction(transaction.id)}>Delete</button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              <form className="transaction-form" onSubmit={saveEntry}>
+                <div className="transaction-form-title">
+                  <strong>{editingTransactionId ? 'Edit entry' : t.home_add} {selectedDay} {monthLabel}</strong>
+                </div>
+                <div className="transaction-fields">
+                  <select value={form.kind} onChange={event => {
+                    const nextKind = event.target.value
+                    const nextCategory = CATEGORY_OPTIONS[nextKind][0]
+                    setForm({ ...form, kind: nextKind, category: nextCategory })
+                  }}>
+                    <option value="expense">{t.home_expense}</option>
+                    <option value="income">{t.home_income}</option>
+                  </select>
+                  <input type="number" min="0.01" step="0.01" placeholder={t.home_amount} value={form.amount} onChange={event => setForm({ ...form, amount: event.target.value })} required />
+                  <select value={form.category || selectedCategoryOptions[0]} onChange={event => setForm({ ...form, category: event.target.value })}>
+                    {selectedCategoryOptions.map(option => (
+                      <option key={option} value={option}>{option}</option>
+                    ))}
+                  </select>
+                  <input type="text" maxLength="200" placeholder={t.home_note} value={form.description} onChange={event => setForm({ ...form, description: event.target.value })} />
+                  <button type="submit" disabled={saving}>{saving ? t.home_saving : editingTransactionId ? 'Save' : t.home_save}</button>
+                </div>
+              </form>
+            </div>
           )}
         </section>
       </div>
