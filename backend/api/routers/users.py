@@ -74,7 +74,10 @@ def get_user_profile(current_user=Depends(get_current_user)):
 
 
 @router.get("/recommendations")
-def get_user_recommendations(current_user=Depends(get_current_user)):
+def get_user_recommendations(
+    current_user=Depends(get_current_user),
+    lang: str = "en",
+):
     from datetime import datetime
 
     profile = get_profile(current_user["id"]) or {}
@@ -99,7 +102,12 @@ def get_user_recommendations(current_user=Depends(get_current_user)):
             break
 
     model = load_recommendation_model()
-    recommendations = build_personalized_recommendations(profile=profile, transactions=transactions, model=model)
+    recommendations = build_personalized_recommendations(
+        profile=profile,
+        transactions=transactions,
+        model=model,
+        lang=lang,
+    )
     return {"items": recommendations}
 
 

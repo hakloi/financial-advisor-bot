@@ -35,6 +35,7 @@ export default function Profile({ t }) {
         risk_level: profile.risk_level,
         investment_horizon: profile.investment_horizon,
       }))
+      window.dispatchEvent(new Event('profile-updated'))
       setSaved(true)
       setTimeout(() => setSaved(false), 2000)
     } catch (error) {

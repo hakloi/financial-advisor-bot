@@ -68,11 +68,11 @@ export default function Home({ t }) {
       .then(data => { if (data.username) setUsername(data.username) })
       .catch(error => setError(error.message))
 
-    api.getRecommendations()
+    api.getRecommendations(t.locale)
       .then(readResponse)
       .then(data => setRecommendations(data.items || []))
       .catch(() => setRecommendations([]))
-  }, [])
+  }, [t.locale])
 
   useEffect(() => {
     api.getTransactions(period.year, period.month + 1)
@@ -80,11 +80,27 @@ export default function Home({ t }) {
       .then(setTransactions)
       .catch(error => setError(error.message))
 
-    api.getRecommendations()
+    api.getRecommendations(t.locale)
       .then(readResponse)
       .then(data => setRecommendations(data.items || []))
       .catch(() => setRecommendations([]))
-  }, [period])
+  }, [period, t.locale])
+
+  useEffect(() => {
+    const reloadRecommendations = () => {
+      api.getProfile()
+        .then(readResponse)
+        .then(data => { if (data.username) setUsername(data.username) })
+        .catch(error => setError(error.message))
+      api.getRecommendations(t.locale)
+        .then(readResponse)
+        .then(data => setRecommendations(data.items || []))
+        .catch(() => setRecommendations([]))
+    }
+
+    window.addEventListener('profile-updated', reloadRecommendations)
+    return () => window.removeEventListener('profile-updated', reloadRecommendations)
+  }, [t.locale])
 
   const dayTransactions = useMemo(() => {
     if (selectedDay === null) return []

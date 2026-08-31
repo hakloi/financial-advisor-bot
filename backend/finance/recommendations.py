@@ -150,8 +150,9 @@ def ensure_model_exists(path: Path = MODEL_PATH):
     return load_recommendation_model(path)
 
 
-def build_personalized_recommendations(profile, transactions, model=None):
+def build_personalized_recommendations(profile, transactions, model=None, lang="en"):
     model = model or load_recommendation_model()
+    lang = (lang or "en").lower()
 
     risk_level = (profile or {}).get("risk_level") or "medium"
     current_savings = float((profile or {}).get("current_savings") or 0.0)
@@ -176,14 +177,26 @@ def build_personalized_recommendations(profile, transactions, model=None):
     savings_rate = 0.0 if income_total <= 0 else monthly_balance / income_total
     target_rate = float(model.get("savings_target", 0.2))
 
+    risk_label = risk_level if risk_level in {"low", "medium", "high"} else "medium"
+    risk_label_text = {"en": {"low": "low", "medium": "medium", "high": "high"}, "ru": {"low": "низкий", "medium": "средний", "high": "высокий"}}[lang].get(risk_label, risk_label)
+    horizon_hint = "short-term buffer" if "1 year" in investment_horizon or "short" in investment_horizon else "long-term growth"
+    horizon_hint_ru = "краткосрочный резерв" if "1 year" in investment_horizon or "short" in investment_horizon else "долгосрочный рост"
+
     recommendations = []
 
     if savings_rate < target_rate:
-        recommendations.append({
-            "title": "Increase your savings buffer",
-            "detail": f"Your current savings rate is {savings_rate:.1%}. Aim for at least {target_rate:.1%} to build a more resilient cash buffer.",
-            "priority": "high",
-        })
+        if lang == "ru":
+            recommendations.append({
+                "title": "Увеличьте резерв накоплений",
+                "detail": f"Ваш текущий уровень сбережений составляет {savings_rate:.1%}. Старайтесь сохранять минимум {target_rate:.1%}, чтобы создать более устойчивый финансовый запас.",
+                "priority": "high",
+            })
+        else:
+            recommendations.append({
+                "title": "Increase your savings buffer",
+                "detail": f"Your current savings rate is {savings_rate:.1%}. Aim for at least {target_rate:.1%} to build a more resilient cash buffer.",
+                "priority": "high",
+            })
 
     if category_totals:
         top_category, top_amount = max(category_totals.items(), key=lambda pair: pair[1])
@@ -191,35 +204,59 @@ def build_personalized_recommendations(profile, transactions, model=None):
         top_share = top_amount / max(expense_total, 1.0)
 
         if top_share > baseline + 0.05:
-            recommendations.append({
-                "title": f"Review {top_category} spending",
-                "detail": f"{top_category} already takes {top_share:.1%} of your expenses. A moderate reduction here can free up cash without harming essentials.",
-                "priority": "medium",
-            })
+            if lang == "ru":
+                recommendations.append({
+                    "title": f"Проверьте траты по категории {top_category}",
+                    "detail": f"Категория {top_category} занимает {top_share:.1%} ваших расходов. Небольшое снижение здесь освободит дополнительный запас средств без ущерба для базовых потребностей.",
+                    "priority": "medium",
+                })
+            else:
+                recommendations.append({
+                    "title": f"Review {top_category} spending",
+                    "detail": f"{top_category} already takes {top_share:.1%} of your expenses. A moderate reduction here can free up cash without harming essentials.",
+                    "priority": "medium",
+                })
 
-    if risk_level not in {"low", "medium", "high"}:
-        risk_level = "medium"
-
-    horizon_hint = "short-term buffer" if "1 year" in investment_horizon or "short" in investment_horizon else "long-term growth"
-    risk_profile = (model.get("risk_profile") or {}).get(risk_level, {"equity": 0.45, "bonds": 0.35, "cash": 0.2})
-    recommendations.append({
-        "title": "Match your portfolio to your risk profile",
-        "detail": f"For a {risk_level} risk profile and {horizon_hint}, a portfolio split of {risk_profile.get('equity', 0.45):.0%} equities, {risk_profile.get('bonds', 0.35):.0%} bonds and {risk_profile.get('cash', 0.2):.0%} cash fits your profile well.",
-        "priority": "medium",
-    })
+    risk_profile = (model.get("risk_profile") or {}).get(risk_label, {"equity": 0.45, "bonds": 0.35, "cash": 0.2})
+    if lang == "ru":
+        recommendations.append({
+            "title": "Согласуйте портфель с уровнем риска",
+            "detail": f"Для {risk_label_text} уровня риска и {horizon_hint_ru} оптимальное распределение выглядит так: {risk_profile.get('equity', 0.45):.0%} акции, {risk_profile.get('bonds', 0.35):.0%} облигации и {risk_profile.get('cash', 0.2):.0%} наличные средства.",
+            "priority": "medium",
+        })
+    else:
+        recommendations.append({
+            "title": "Match your portfolio to your risk profile",
+            "detail": f"For a {risk_label_text} risk profile and {horizon_hint}, a portfolio split of {risk_profile.get('equity', 0.45):.0%} equities, {risk_profile.get('bonds', 0.35):.0%} bonds and {risk_profile.get('cash', 0.2):.0%} cash fits your profile well.",
+            "priority": "medium",
+        })
 
     if current_savings <= 0:
-        recommendations.append({
-            "title": "Start a monthly emergency reserve",
-            "detail": "Set aside a fixed amount every paycheck to protect your financial stability before investing more heavily.",
-            "priority": "high",
-        })
+        if lang == "ru":
+            recommendations.append({
+                "title": "Начните ежемесячный резерв на непредвиденные расходы",
+                "detail": "Отделяйте фиксированную сумму от каждого дохода, прежде чем увеличивать инвестиции, чтобы защитить финансовую стабильность.",
+                "priority": "high",
+            })
+        else:
+            recommendations.append({
+                "title": "Start a monthly emergency reserve",
+                "detail": "Set aside a fixed amount every paycheck to protect your financial stability before investing more heavily.",
+                "priority": "high",
+            })
 
     if not recommendations:
-        recommendations.append({
-            "title": "Keep a steady cash flow",
-            "detail": "Your habits are balanced. Continue tracking spending and keep a monthly surplus to accelerate your goals.",
-            "priority": "low",
-        })
+        if lang == "ru":
+            recommendations.append({
+                "title": "Поддерживайте стабильный денежный поток",
+                "detail": "Ваши привычки сбалансированы. Продолжайте отслеживать расходы и сохранять ежемесячный surplus для достижения целей.",
+                "priority": "low",
+            })
+        else:
+            recommendations.append({
+                "title": "Keep a steady cash flow",
+                "detail": "Your habits are balanced. Continue tracking spending and keep a monthly surplus to accelerate your goals.",
+                "priority": "low",
+            })
 
     return recommendations[:4]
