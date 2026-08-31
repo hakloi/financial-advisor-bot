@@ -1,6 +1,7 @@
 FROM python:3.11-slim
 
 ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONPATH=/app
 
 WORKDIR /app
 
@@ -10,10 +11,11 @@ RUN pip install -r requirements.txt
 
 COPY . .
 
-RUN python -m compileall -q main.py backend && python ML/train_recommendation_model.py
+RUN python -m compileall -q main.py backend ML
 
-RUN addgroup --system app && adduser --system --ingroup app app \
-	&& chown -R app:app /app
+RUN addgroup --system app \
+    && adduser --system --ingroup app app \
+    && chown -R app:app /app
 
 USER app
 
