@@ -161,13 +161,17 @@ def build_personalized_recommendations(profile, transactions, model=None, lang="
     income_total = 0.0
     expense_total = 0.0
     category_totals = defaultdict(float)
+    income_by_category = defaultdict(float)
 
     for item in transactions or []:
         amount = float(item.get("amount") or 0.0)
         if amount <= 0:
             continue
-        if str(item.get("kind", "")).lower() == "income":
+        kind = str(item.get("kind", "")).lower()
+        if kind == "income":
             income_total += amount
+            category = _normalize_category(item.get("category") or "Salary")
+            income_by_category[category] += amount
         else:
             expense_total += amount
             category = _normalize_category(item.get("category") or "Other")
@@ -178,50 +182,97 @@ def build_personalized_recommendations(profile, transactions, model=None, lang="
     target_rate = float(model.get("savings_target", 0.2))
 
     risk_label = risk_level if risk_level in {"low", "medium", "high"} else "medium"
-    risk_label_text = {"en": {"low": "low", "medium": "medium", "high": "high"}, "ru": {"low": "низкий", "medium": "средний", "high": "высокий"}}[lang].get(risk_label, risk_label)
+    risk_label_text = {
+        "en": {"low": "low", "medium": "medium", "high": "high"},
+        "ru": {"low": "низкий", "medium": "средний", "high": "высокий"},
+    }[lang].get(risk_label, risk_label)
     horizon_hint = "short-term buffer" if "1 year" in investment_horizon or "short" in investment_horizon else "long-term growth"
     horizon_hint_ru = "краткосрочный резерв" if "1 year" in investment_horizon or "short" in investment_horizon else "долгосрочный рост"
 
     recommendations = []
 
+    if category_totals:
+        top_category, top_amount = max(category_totals.items(), key=lambda pair: pair[1])
+        baseline = float((model.get("category_spending") or {}).get(top_category, 0.15))
+        top_share = top_amount / max(expense_total, 1.0)
+        share_delta = top_share - baseline
+
+        if lang == "ru":
+            recommendations.append({
+                "title": f"Трата {top_category} — самая большая",
+                "detail": f"В этом периоде на {top_category} потрачено {top_amount:,.0f} ₽, что составляет {top_share:.1%} от всех расходов. Норматив модели для этой категории — {baseline:.1%}.",
+                "priority": "high",
+            })
+        else:
+            recommendations.append({
+                "title": f"{top_category} is your biggest expense",
+                "detail": f"You spent {top_amount:,.0f} ₽ on {top_category}, which is {top_share:.1%} of all expenses. The model baseline for this category is {baseline:.1%}.",
+                "priority": "high",
+            })
+
+        if share_delta > 0.05:
+            if lang == "ru":
+                recommendations.append({
+                    "title": f"Сократите {top_category} до нормы",
+                    "detail": f"Траты по {top_category} превышают модельный ориентир на {share_delta:.1%}. Снижение на 5–10% здесь быстро освободит деньги для накоплений.",
+                    "priority": "medium",
+                })
+            else:
+                recommendations.append({
+                    "title": f"Cut {top_category} to the model norm",
+                    "detail": f"Spending on {top_category} is {share_delta:.1%} above the model benchmark. Reducing it by 5–10% would quickly free up cash for savings.",
+                    "priority": "medium",
+                })
+
+    if income_total > 0 and expense_total > 0:
+        expense_ratio = expense_total / income_total
+        if lang == "ru":
+            recommendations.append({
+                "title": "Соотношение доходов и расходов",
+                "detail": f"Расходы составляют {expense_ratio:.1%} от доходов. Оставшийся баланс — {monthly_balance:,.0f} ₽. Чтобы удерживать устойчивый сценарий, сохраняйте минимум {target_rate:.1%} от дохода.",
+                "priority": "medium",
+            })
+        else:
+            recommendations.append({
+                "title": "Income-to-expense balance",
+                "detail": f"Expenses are {expense_ratio:.1%} of income, with a net balance of {monthly_balance:,.0f} ₽. To keep the scenario healthy, aim to save at least {target_rate:.1%} of income.",
+                "priority": "medium",
+            })
+
     if savings_rate < target_rate:
         if lang == "ru":
             recommendations.append({
                 "title": "Увеличьте резерв накоплений",
-                "detail": f"Ваш текущий уровень сбережений составляет {savings_rate:.1%}. Старайтесь сохранять минимум {target_rate:.1%}, чтобы создать более устойчивый финансовый запас.",
+                "detail": f"Ваш текущий уровень сбережений — {savings_rate:.1%}. Цель модели — {target_rate:.1%}. Сохранение даже 5–10% от дохода даст заметный запас на форс-мажор.",
                 "priority": "high",
             })
         else:
             recommendations.append({
                 "title": "Increase your savings buffer",
-                "detail": f"Your current savings rate is {savings_rate:.1%}. Aim for at least {target_rate:.1%} to build a more resilient cash buffer.",
+                "detail": f"Your current savings rate is {savings_rate:.1%}. The model target is {target_rate:.1%}. Saving even 5–10% of income would significantly improve your cushion.",
                 "priority": "high",
             })
 
-    if category_totals:
-        top_category, top_amount = max(category_totals.items(), key=lambda pair: pair[1])
-        baseline = float((model.get("category_spending") or {}).get(top_category, 0.15))
-        top_share = top_amount / max(expense_total, 1.0)
-
-        if top_share > baseline + 0.05:
-            if lang == "ru":
-                recommendations.append({
-                    "title": f"Проверьте траты по категории {top_category}",
-                    "detail": f"Категория {top_category} занимает {top_share:.1%} ваших расходов. Небольшое снижение здесь освободит дополнительный запас средств без ущерба для базовых потребностей.",
-                    "priority": "medium",
-                })
-            else:
-                recommendations.append({
-                    "title": f"Review {top_category} spending",
-                    "detail": f"{top_category} already takes {top_share:.1%} of your expenses. A moderate reduction here can free up cash without harming essentials.",
-                    "priority": "medium",
-                })
+    if income_by_category:
+        top_income_category, top_income_amount = max(income_by_category.items(), key=lambda pair: pair[1])
+        if lang == "ru":
+            recommendations.append({
+                "title": "Основной источник дохода",
+                "detail": f"Больше всего денег приходит из категории {top_income_category}: {top_income_amount:,.0f} ₽. Стабильность дохода важнее, чем быстрый рост расходов.",
+                "priority": "low",
+            })
+        else:
+            recommendations.append({
+                "title": "Main income source",
+                "detail": f"Most of your income comes from {top_income_category}: {top_income_amount:,.0f} ₽. Keeping this stream stable is a stronger lever than cutting all spending at once.",
+                "priority": "low",
+            })
 
     risk_profile = (model.get("risk_profile") or {}).get(risk_label, {"equity": 0.45, "bonds": 0.35, "cash": 0.2})
     if lang == "ru":
         recommendations.append({
             "title": "Согласуйте портфель с уровнем риска",
-            "detail": f"Для {risk_label_text} уровня риска и {horizon_hint_ru} оптимальное распределение выглядит так: {risk_profile.get('equity', 0.45):.0%} акции, {risk_profile.get('bonds', 0.35):.0%} облигации и {risk_profile.get('cash', 0.2):.0%} наличные средства.",
+            "detail": f"Для {risk_label_text} уровня риска и {horizon_hint_ru} оптимальное распределение: {risk_profile.get('equity', 0.45):.0%} акции, {risk_profile.get('bonds', 0.35):.0%} облигации и {risk_profile.get('cash', 0.2):.0%} наличные средства.",
             "priority": "medium",
         })
     else:
@@ -234,14 +285,14 @@ def build_personalized_recommendations(profile, transactions, model=None, lang="
     if current_savings <= 0:
         if lang == "ru":
             recommendations.append({
-                "title": "Начните ежемесячный резерв на непредвиденные расходы",
-                "detail": "Отделяйте фиксированную сумму от каждого дохода, прежде чем увеличивать инвестиции, чтобы защитить финансовую стабильность.",
+                "title": "Создайте резерв на черный день",
+                "detail": "Отделяйте фиксированную сумму от каждого дохода, чтобы защитить стабильность до начала более агрессивного инвестирования.",
                 "priority": "high",
             })
         else:
             recommendations.append({
-                "title": "Start a monthly emergency reserve",
-                "detail": "Set aside a fixed amount every paycheck to protect your financial stability before investing more heavily.",
+                "title": "Build an emergency reserve",
+                "detail": "Set aside a fixed amount every paycheck so your finances stay stable before you invest more aggressively.",
                 "priority": "high",
             })
 
@@ -259,4 +310,13 @@ def build_personalized_recommendations(profile, transactions, model=None, lang="
                 "priority": "low",
             })
 
-    return recommendations[:4]
+    # Keep recommendations focused and helpful; more than four hints is welcome for the Home section.
+    unique = []
+    seen = set()
+    for item in recommendations:
+        key = (item["title"], item["detail"])
+        if key in seen:
+            continue
+        seen.add(key)
+        unique.append(item)
+    return unique[:6]

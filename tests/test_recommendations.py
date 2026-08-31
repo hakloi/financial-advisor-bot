@@ -38,6 +38,28 @@ class RecommendationModelTest(unittest.TestCase):
         self.assertTrue(len(recommendations) >= 2)
         self.assertTrue(all("title" in item for item in recommendations))
 
+    def test_monthly_spending_recommendations_are_richer_and_category_based(self):
+        recommendations = build_personalized_recommendations(
+            profile={"risk_level": "high", "investment_horizon": "1 year", "current_savings": 0},
+            transactions=[
+                {"kind": "income", "amount": 100000, "category": "Salary"},
+                {"kind": "expense", "amount": 65000, "category": "Food"},
+                {"kind": "expense", "amount": 20000, "category": "Housing"},
+                {"kind": "expense", "amount": 15000, "category": "Transport"},
+                {"kind": "expense", "amount": 10000, "category": "Shopping"},
+            ],
+            model={
+                "category_spending": {"Food": 0.22, "Housing": 0.18, "Transport": 0.12, "Shopping": 0.08},
+                "savings_target": 0.25,
+                "risk_profile": {"high": {"equity": 0.7, "bonds": 0.2, "cash": 0.1}},
+            },
+            lang="en",
+        )
+        self.assertGreaterEqual(len(recommendations), 4)
+        titles = " ".join(item["title"] for item in recommendations)
+        self.assertIn("Food", titles)
+        self.assertTrue(any("savings" in item["title"].lower() or "savings" in item["detail"].lower() for item in recommendations))
+
 
 if __name__ == "__main__":
     unittest.main()
