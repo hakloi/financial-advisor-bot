@@ -14,7 +14,7 @@ export default function Home({ t }) {
   const [transactions, setTransactions] = useState([])
   const [recommendations, setRecommendations] = useState([])
   const [news, setNews] = useState([])
-  const [market, setMarket] = useState({ key_rate: null, usd: null, eur: null, labels: {} })
+  const [market, setMarket] = useState({ usd: null, eur: null, cny: null, inr: null, labels: {} })
   const [selectedDay, setSelectedDay] = useState(null)
   const [editingTransactionId, setEditingTransactionId] = useState(null)
   const [form, setForm] = useState({ kind: 'expense', amount: '', description: '', category: '' })
@@ -80,12 +80,12 @@ export default function Home({ t }) {
       .then(data => {
         setRecommendations(data.items || [])
         setNews(data.news || [])
-        setMarket(data.market || { key_rate: null, usd: null, eur: null, labels: {} })
+        setMarket(data.market || { usd: null, eur: null, cny: null, inr: null, labels: {} })
       })
       .catch(() => {
         setRecommendations([])
         setNews([])
-        setMarket({ key_rate: null, usd: null, eur: null, labels: {} })
+        setMarket({ usd: null, eur: null, cny: null, inr: null, labels: {} })
       })
   }, [period, t.locale])
 
@@ -100,12 +100,12 @@ export default function Home({ t }) {
         .then(data => {
           setRecommendations(data.items || [])
           setNews(data.news || [])
-          setMarket(data.market || { key_rate: null, usd: null, eur: null, labels: {} })
+          setMarket(data.market || { usd: null, eur: null, cny: null, inr: null, labels: {} })
         })
         .catch(() => {
           setRecommendations([])
           setNews([])
-          setMarket({ key_rate: null, usd: null, eur: null, labels: {} })
+          setMarket({ usd: null, eur: null, cny: null, inr: null, labels: {} })
         })
     }
 
@@ -199,6 +199,24 @@ export default function Home({ t }) {
   return (
     <div className="home-page">
       <div className="home-content">
+        {(market.usd !== null || market.eur !== null || market.cny !== null || market.inr !== null) && (
+          <div className="macro-ticker" aria-label="Macro indicators">
+            <div className="macro-ticker-track">
+              {[['USD/RUB', market.usd], ['EUR/RUB', market.eur], ['CNY/RUB', market.cny], ['INR/RUB', market.inr]].map(([label, value], index) => (
+                <span key={`${label}-${index}`} className="macro-ticker-item">
+                  <strong>{label}</strong>
+                  <span>{value !== null ? value.toFixed(2) : '—'}</span>
+                </span>
+              ))}
+              {[['USD/RUB', market.usd], ['EUR/RUB', market.eur], ['CNY/RUB', market.cny], ['INR/RUB', market.inr]].map(([label, value], index) => (
+                <span key={`${label}-copy-${index}`} className="macro-ticker-item">
+                  <strong>{label}</strong>
+                  <span>{value !== null ? value.toFixed(2) : '—'}</span>
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
         <p className="home-kicker">Fina</p>
         <h1>{t.home_welcome}, {username || t.home_user}!</h1>
         <p className="home-message">{t.home_message}</p>
@@ -217,16 +235,12 @@ export default function Home({ t }) {
               <button type="button" onClick={() => changeMonth(1)} aria-label={t.home_next_month}>→</button>
             </div>
           </div>
-          {(market.key_rate !== null || market.usd !== null || market.eur !== null) && (
+          {(market.usd !== null || market.eur !== null || market.cny !== null || market.inr !== null) && (
             <div className="market-strip">
               <div className="market-strip-head">
-                <span>{t.locale === 'ru' ? 'Макро-метрики' : 'Macro indicators'}</span>
+                <span>{t.locale === 'ru' ? 'Курсы валют' : 'FX rates'}</span>
               </div>
               <div className="market-values">
-                <div className="market-metric">
-                  <span>{market.labels.key_rate || (t.locale === 'ru' ? 'Ключевая ставка' : 'Key rate')}</span>
-                  <strong>{market.key_rate !== null ? `${market.key_rate}%` : '—'}</strong>
-                </div>
                 <div className="market-metric">
                   <span>USD/RUB</span>
                   <strong>{market.usd !== null ? market.usd.toFixed(2) : '—'}</strong>
@@ -235,18 +249,14 @@ export default function Home({ t }) {
                   <span>EUR/RUB</span>
                   <strong>{market.eur !== null ? market.eur.toFixed(2) : '—'}</strong>
                 </div>
-              </div>
-              <div className="market-sparkline" aria-hidden="true">
-                <span style={{ height: '30%' }} />
-                <span style={{ height: '42%' }} />
-                <span style={{ height: '55%' }} />
-                <span style={{ height: '68%' }} />
-                <span style={{ height: '48%' }} />
-                <span style={{ height: '72%' }} />
-                <span style={{ height: '85%' }} />
-                <span style={{ height: '76%' }} />
-                <span style={{ height: '88%' }} />
-                <span style={{ height: '92%' }} />
+                <div className="market-metric">
+                  <span>CNY/RUB</span>
+                  <strong>{market.cny !== null ? market.cny.toFixed(2) : '—'}</strong>
+                </div>
+                <div className="market-metric">
+                  <span>INR/RUB</span>
+                  <strong>{market.inr !== null ? market.inr.toFixed(2) : '—'}</strong>
+                </div>
               </div>
             </div>
           )}

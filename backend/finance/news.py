@@ -24,47 +24,41 @@ def fetch_market_snapshot(lang="ru"):
     if cached and now - cached["ts"] < 86400:
         payload = cached["data"]
         return payload if locale == "ru" else {
-            "key_rate": payload["key_rate"],
             "usd": payload["usd"],
             "eur": payload["eur"],
+            "cny": payload["cny"],
+            "inr": payload["inr"],
             "labels": {
-                "key_rate": "Key rate",
                 "usd": "USD/RUB",
                 "eur": "EUR/RUB",
+                "cny": "CNY/RUB",
+                "inr": "INR/RUB",
             },
         }
 
-    fallback = {"key_rate": 18.5, "usd": 89.6, "eur": 97.4}
+    fallback = {"usd": 89.6, "eur": 97.4, "cny": 12.1, "inr": 1.05}
 
     try:
         xml_response = requests.get("https://www.cbr.ru/scripts/XML_daily.asp", timeout=15, headers={"User-Agent": "Mozilla/5.0"})
         xml_response.raise_for_status()
         xml_text = xml_response.text
-        for code in ("USD", "EUR"):
+        for code in ("USD", "EUR", "CNY", "INR"):
             match = re.search(rf"<Valute\s+ID=\"[^\"]+\"[\s\S]*?<CharCode>{code}</CharCode>[\s\S]*?<Value>([0-9,\.]+)</Value>", xml_text)
             if match:
                 fallback[code.lower()] = _safe_float(match.group(1)) or fallback[code.lower()]
     except Exception:
         pass
 
-    try:
-        rate_response = requests.get("https://www.cbr.ru/hd_base/keyrate/", timeout=15, headers={"User-Agent": "Mozilla/5.0"})
-        rate_response.raise_for_status()
-        text = rate_response.text
-        matches = re.findall(r"(?:ключевая ставка|key rate).*?(\d+(?:[.,]\d+)?)\s*%?", text, flags=re.I | re.S)
-        if matches:
-            fallback["key_rate"] = _safe_float(matches[0]) or fallback["key_rate"]
-    except Exception:
-        pass
-
     payload = {
-        "key_rate": round(float(fallback["key_rate"]), 2),
         "usd": round(float(fallback["usd"]), 2),
         "eur": round(float(fallback["eur"]), 2),
+        "cny": round(float(fallback["cny"]), 2),
+        "inr": round(float(fallback["inr"]), 2),
         "labels": {
-            "key_rate": "Ключевая ставка" if locale == "ru" else "Key rate",
             "usd": "USD/RUB",
             "eur": "EUR/RUB",
+            "cny": "CNY/RUB",
+            "inr": "INR/RUB",
         },
     }
     _MARKET_CACHE["market"] = {"ts": now, "data": payload}
@@ -156,8 +150,10 @@ def fetch_financial_news(lang="ru", limit=3):
     ]
 
     gathered = []
-    seen = set()
+    seen_titles = set()
     for source in sources:
+        if len(gathered) >= limit:
+            break
         try:
             response = requests.get(source["url"], timeout=15, headers={"User-Agent": "Mozilla/5.0"})
             response.raise_for_status()
@@ -165,29 +161,30 @@ def fetch_financial_news(lang="ru", limit=3):
         except Exception:
             links = []
 
+        chosen = None
         for item in links:
             title = _clean_title(item["title"])
             if not title or len(title) < 18 or title.lower() in {"главная", "все новости", "новости", "о нас"}:
                 continue
-            if title in seen:
+            if title in seen_titles:
                 continue
-            seen.add(title)
-            gathered.append({
+            seen_titles.add(title)
+            chosen = {
                 "title": title,
                 "source": source["name"],
                 "url": item["url"],
                 "lang": locale,
-            })
-            if len(gathered) >= limit:
-                break
-        if len(gathered) >= limit:
+            }
             break
+
+        if chosen:
+            gathered.append(chosen)
 
     if not gathered:
         payload = [
             {"title": "Финансовые новости недоступны сейчас, но рынок и экономические события продолжают анализироваться.", "source": "banki.ru", "url": "https://www.banki.ru/news/lenta/", "lang": locale},
             {"title": "Ключевые решения центрального банка и макроэкономические сигналы остаются важным ориентиром для портфеля.", "source": "cbr.ru", "url": "https://cbr.ru/", "lang": locale},
-            {"title": "Финансовые индикаторы и политика монетарных органов влияют на выбор активов и капитала.", "source": "forbes.ru", "url": "https://www.forbes.ru/", "lang": locale},
+            {"title": "Финансовые индикаторы и политика монетарных органов влияют на выбор активов и капитала.", "source": "forbes.ru", "url": "https://www.forbes.ru/finansy", "lang": locale},
         ]
     else:
         payload = gathered[:limit]

@@ -63,12 +63,14 @@ class RecommendationModelTest(unittest.TestCase):
 
     def test_fetch_market_snapshot_returns_rates(self):
         snapshot = fetch_market_snapshot(lang="ru")
-        self.assertIn("key_rate", snapshot)
         self.assertIn("usd", snapshot)
         self.assertIn("eur", snapshot)
-        self.assertTrue(isinstance(snapshot["key_rate"], (int, float)))
+        self.assertIn("cny", snapshot)
+        self.assertIn("inr", snapshot)
         self.assertTrue(isinstance(snapshot["usd"], (int, float)))
         self.assertTrue(isinstance(snapshot["eur"], (int, float)))
+        self.assertTrue(isinstance(snapshot["cny"], (int, float)))
+        self.assertTrue(isinstance(snapshot["inr"], (int, float)))
 
 
 if __name__ == "__main__":

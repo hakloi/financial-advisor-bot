@@ -164,6 +164,42 @@ body {
   letter-spacing: 0.16em;
   text-transform: uppercase;
 }
+.macro-ticker {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  width: 100%;
+  overflow: hidden;
+  margin-bottom: 18px;
+  border-radius: 12px;
+  background: linear-gradient(90deg, rgba(37, 99, 235, 0.08), rgba(99, 102, 241, 0.12), rgba(37, 99, 235, 0.08));
+  border: 1px solid rgba(99, 102, 241, 0.18);
+  box-shadow: 0 8px 20px rgba(99, 102, 241, 0.08);
+}
+.macro-ticker-track {
+  display: flex;
+  width: max-content;
+  white-space: nowrap;
+  animation: macro-scroll 24s linear infinite;
+  padding: 10px 0;
+}
+.macro-ticker-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 18px;
+  color: #0f172a;
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+.macro-ticker-item strong {
+  color: #475569;
+  font-weight: 700;
+}
+@keyframes macro-scroll {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
 .home-content h1 {
   margin: 0;
   color: #1e293b;
