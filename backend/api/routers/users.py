@@ -5,6 +5,7 @@ from backend.api.schemas.schemas import ProfileUpdate, AccountUpdate, Transactio
 from backend.auth.database import get_profile, update_profile, get_avatar, update_avatar, delete_avatar, update_user, get_user_by_id, create_transaction, update_transaction, delete_transaction, load_transactions # Database functions for retrieving and updating user data
 from backend.auth.hash import hash_password, verify_password # Functions for hashing and verifying passwords
 from backend.auth.jwt import get_current_user # Dependency function to get the current authenticated user
+from backend.finance.recommendations import build_personalized_recommendations, load_recommendation_model
 
 router = APIRouter() # Class used to group related API routes together
 
@@ -70,6 +71,36 @@ def get_user_profile(current_user=Depends(get_current_user)):
     print("Current user ID:", current_user["id"])
     profile = get_profile(current_user["id"])
     return profile or {"username": current_user["username"], "current_user_id": current_user["id"]}
+
+
+@router.get("/recommendations")
+def get_user_recommendations(current_user=Depends(get_current_user)):
+    from datetime import datetime
+
+    profile = get_profile(current_user["id"]) or {}
+    today = datetime.today().replace(day=1)
+
+    months = []
+    for offset in range(0, 3):
+        month_index = today.month - offset
+        year = today.year
+        while month_index <= 0:
+            year -= 1
+            month_index += 12
+        while month_index > 12:
+            year += 1
+            month_index -= 12
+        months.append((year, month_index))
+
+    transactions = []
+    for year, month in months:
+        transactions.extend(load_transactions(current_user["id"], year=year, month=month))
+        if len(transactions) >= 80:
+            break
+
+    model = load_recommendation_model()
+    recommendations = build_personalized_recommendations(profile=profile, transactions=transactions, model=model)
+    return {"items": recommendations}
 
 
 # Route for updating the user's profile information, which allows the user to modify their age, current savings, currency, risk level, and investment horizon

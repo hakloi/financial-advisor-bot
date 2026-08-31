@@ -20,6 +20,8 @@ export default {
   home_cancel: 'Cancel',
   home_previous_month: 'Previous month',
   home_next_month: 'Next month',
+  home_recommendations_title: 'Smart insights for your budget',
+  home_recommendations_subtitle: 'Personalized recommendations',
 
   category_salary: 'Salary',
   category_freelance: 'Freelance',

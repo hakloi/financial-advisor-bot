@@ -32,6 +32,9 @@ export const api = {
   getProfile: () =>
     fetch(`${BASE}/users/profile`, { headers: authHeaders() }),
 
+  getRecommendations: () =>
+    fetch(`${BASE}/users/recommendations`, { headers: authHeaders() }),
+
   getTransactions: (year, month) =>
     fetch(`${BASE}/users/transactions?year=${year}&month=${month}`, { headers: authHeaders() }),
 

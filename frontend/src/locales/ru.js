@@ -20,6 +20,8 @@ export default {
   home_cancel: 'Отмена',
   home_previous_month: 'Предыдущий месяц',
   home_next_month: 'Следующий месяц',
+  home_recommendations_title: 'Умные подсказки для бюджета',
+  home_recommendations_subtitle: 'Персонализированные рекомендации',
 
   category_salary: 'Зарплата',
   category_freelance: 'Фриланс',

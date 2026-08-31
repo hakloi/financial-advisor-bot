@@ -12,6 +12,7 @@ export default function Home({ t }) {
   const now = new Date()
   const [period, setPeriod] = useState({ year: now.getFullYear(), month: now.getMonth() })
   const [transactions, setTransactions] = useState([])
+  const [recommendations, setRecommendations] = useState([])
   const [selectedDay, setSelectedDay] = useState(null)
   const [editingTransactionId, setEditingTransactionId] = useState(null)
   const [form, setForm] = useState({ kind: 'expense', amount: '', description: '', category: '' })
@@ -66,6 +67,11 @@ export default function Home({ t }) {
       .then(readResponse)
       .then(data => { if (data.username) setUsername(data.username) })
       .catch(error => setError(error.message))
+
+    api.getRecommendations()
+      .then(readResponse)
+      .then(data => setRecommendations(data.items || []))
+      .catch(() => setRecommendations([]))
   }, [])
 
   useEffect(() => {
@@ -73,6 +79,11 @@ export default function Home({ t }) {
       .then(readResponse)
       .then(setTransactions)
       .catch(error => setError(error.message))
+
+    api.getRecommendations()
+      .then(readResponse)
+      .then(data => setRecommendations(data.items || []))
+      .catch(() => setRecommendations([]))
   }, [period])
 
   const dayTransactions = useMemo(() => {
@@ -216,6 +227,27 @@ export default function Home({ t }) {
               })}
             </div>
           </div>
+
+          {recommendations.length > 0 && (
+            <div className="recommendation-panel">
+              <div className="recommendation-header">
+                <p className="finance-eyebrow">{t.home_recommendations_subtitle}</p>
+                <h3>{t.home_recommendations_title}</h3>
+              </div>
+              <div className="recommendation-list">
+                {recommendations.map((item, index) => (
+                  <div key={`${item.title}-${index}`} className={`recommendation-item priority-${item.priority || 'medium'}`}>
+                    <span className="recommendation-badge">{item.priority || 'medium'}</span>
+                    <div>
+                      <strong>{item.title}</strong>
+                      <p>{item.detail}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           {selectedDay && (
             <div className="transaction-panel">
               <div className="transaction-panel-header">
