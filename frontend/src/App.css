@@ -327,6 +327,68 @@ body {
   line-height: 1.5;
   font-size: 0.9rem;
 }
+.market-news-grid {
+  margin-top: 22px;
+  display: grid;
+  grid-template-columns: 1.5fr 0.9fr;
+  gap: 18px;
+  align-items: start;
+}
+.news-panel,
+.market-panel {
+  padding: 18px 20px;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  background: rgba(255,255,255,0.82);
+}
+.news-list {
+  display: grid;
+  gap: 10px;
+}
+.news-item {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px 12px;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  background: #f8fafc;
+  color: #1e293b;
+  text-decoration: none;
+}
+.news-item strong {
+  line-height: 1.45;
+  font-size: 0.9rem;
+}
+.news-source {
+  color: #6366f1;
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.market-grid {
+  display: grid;
+  gap: 10px;
+}
+.market-card {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, rgba(14,165,233,0.08), rgba(99,102,241,0.08));
+  border: 1px solid #dfe7f3;
+}
+.market-card span {
+  color: #475569;
+  font-size: 0.82rem;
+}
+.market-card strong {
+  color: #0f172a;
+  font-size: 1rem;
+}
 .recommendation-badge {
   display: inline-flex;
   align-items: center;

@@ -13,6 +13,8 @@ export default function Home({ t }) {
   const [period, setPeriod] = useState({ year: now.getFullYear(), month: now.getMonth() })
   const [transactions, setTransactions] = useState([])
   const [recommendations, setRecommendations] = useState([])
+  const [news, setNews] = useState([])
+  const [market, setMarket] = useState({ key_rate: null, usd: null, eur: null, labels: {} })
   const [selectedDay, setSelectedDay] = useState(null)
   const [editingTransactionId, setEditingTransactionId] = useState(null)
   const [form, setForm] = useState({ kind: 'expense', amount: '', description: '', category: '' })
@@ -70,8 +72,16 @@ export default function Home({ t }) {
 
     api.getRecommendations(t.locale)
       .then(readResponse)
-      .then(data => setRecommendations(data.items || []))
-      .catch(() => setRecommendations([]))
+      .then(data => {
+        setRecommendations(data.items || [])
+        setNews(data.news || [])
+        setMarket(data.market || { key_rate: null, usd: null, eur: null, labels: {} })
+      })
+      .catch(() => {
+        setRecommendations([])
+        setNews([])
+        setMarket({ key_rate: null, usd: null, eur: null, labels: {} })
+      })
   }, [t.locale])
 
   useEffect(() => {
@@ -82,8 +92,16 @@ export default function Home({ t }) {
 
     api.getRecommendations(t.locale)
       .then(readResponse)
-      .then(data => setRecommendations(data.items || []))
-      .catch(() => setRecommendations([]))
+      .then(data => {
+        setRecommendations(data.items || [])
+        setNews(data.news || [])
+        setMarket(data.market || { key_rate: null, usd: null, eur: null, labels: {} })
+      })
+      .catch(() => {
+        setRecommendations([])
+        setNews([])
+        setMarket({ key_rate: null, usd: null, eur: null, labels: {} })
+      })
   }, [period, t.locale])
 
   useEffect(() => {
@@ -94,8 +112,16 @@ export default function Home({ t }) {
         .catch(error => setError(error.message))
       api.getRecommendations(t.locale)
         .then(readResponse)
-        .then(data => setRecommendations(data.items || []))
-        .catch(() => setRecommendations([]))
+        .then(data => {
+          setRecommendations(data.items || [])
+          setNews(data.news || [])
+          setMarket(data.market || { key_rate: null, usd: null, eur: null, labels: {} })
+        })
+        .catch(() => {
+          setRecommendations([])
+          setNews([])
+          setMarket({ key_rate: null, usd: null, eur: null, labels: {} })
+        })
     }
 
     window.addEventListener('profile-updated', reloadRecommendations)
@@ -244,26 +270,6 @@ export default function Home({ t }) {
             </div>
           </div>
 
-          {recommendations.length > 0 && (
-            <div className="recommendation-panel">
-              <div className="recommendation-header">
-                <p className="finance-eyebrow">{t.home_recommendations_subtitle}</p>
-                <h3>{t.home_recommendations_title}</h3>
-              </div>
-              <div className="recommendation-list">
-                {recommendations.map((item, index) => (
-                  <div key={`${item.title}-${index}`} className={`recommendation-item priority-${item.priority || 'medium'}`}>
-                    <span className="recommendation-badge">{item.priority || 'medium'}</span>
-                    <div>
-                      <strong>{item.title}</strong>
-                      <p>{item.detail}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
           {selectedDay && (
             <div className="transaction-panel">
               <div className="transaction-panel-header">
@@ -325,6 +331,69 @@ export default function Home({ t }) {
           )}
         </section>
 
+        {recommendations.length > 0 && (
+          <section className="recommendation-panel">
+            <div className="recommendation-header">
+              <p className="finance-eyebrow">{t.home_recommendations_subtitle}</p>
+              <h3>{t.home_recommendations_title}</h3>
+            </div>
+            <div className="recommendation-list">
+              {recommendations.map((item, index) => (
+                <div key={`${item.title}-${index}`} className={`recommendation-item priority-${item.priority || 'medium'}`}>
+                  <span className="recommendation-badge">{item.priority || 'medium'}</span>
+                  <div>
+                    <strong>{item.title}</strong>
+                    <p>{item.detail}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
+
+        {(news.length > 0 || market.key_rate !== null || market.usd !== null || market.eur !== null) && (
+          <div className="market-news-grid">
+            {news.length > 0 && (
+              <section className="news-panel">
+                <div className="recommendation-header">
+                  <p className="finance-eyebrow">{t.locale === 'ru' ? 'Новости' : 'Finance news'}</p>
+                  <h3>{t.locale === 'ru' ? 'Макрообзор' : 'Market updates'}</h3>
+                </div>
+                <div className="news-list">
+                  {news.map((item, index) => (
+                    <a key={`${item.title}-${index}`} href={item.url} target="_blank" rel="noreferrer" className="news-item">
+                      <span className="news-source">{item.source}</span>
+                      <strong>{item.title}</strong>
+                    </a>
+                  ))}
+                </div>
+              </section>
+            )}
+
+            {(market.key_rate !== null || market.usd !== null || market.eur !== null) && (
+              <section className="market-panel">
+                <div className="recommendation-header">
+                  <p className="finance-eyebrow">{t.locale === 'ru' ? 'Рынок' : 'Market'}</p>
+                  <h3>{t.locale === 'ru' ? 'Ключевая ставка и курсы' : 'Key rate & FX'}</h3>
+                </div>
+                <div className="market-grid">
+                  <div className="market-card">
+                    <span>{market.labels.key_rate || (t.locale === 'ru' ? 'Ключевая ставка' : 'Key rate')}</span>
+                    <strong>{market.key_rate !== null ? `${market.key_rate}%` : '—'}</strong>
+                  </div>
+                  <div className="market-card">
+                    <span>USD/RUB</span>
+                    <strong>{market.usd !== null ? market.usd.toFixed(2) : '—'}</strong>
+                  </div>
+                  <div className="market-card">
+                    <span>EUR/RUB</span>
+                    <strong>{market.eur !== null ? market.eur.toFixed(2) : '—'}</strong>
+                  </div>
+                </div>
+              </section>
+            )}
+          </div>
+        )}
 
         {/* Section: Finance Month
         <section className="finance-month" aria-labelledby="finance-month-title">

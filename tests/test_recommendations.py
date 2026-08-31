@@ -1,5 +1,6 @@
 import unittest
 
+from backend.finance.news import fetch_market_snapshot
 from backend.finance.recommendations import (
     build_personalized_recommendations,
     train_recommendation_model,
@@ -59,6 +60,15 @@ class RecommendationModelTest(unittest.TestCase):
         titles = " ".join(item["title"] for item in recommendations)
         self.assertIn("Food", titles)
         self.assertTrue(any("savings" in item["title"].lower() or "savings" in item["detail"].lower() for item in recommendations))
+
+    def test_fetch_market_snapshot_returns_rates(self):
+        snapshot = fetch_market_snapshot(lang="ru")
+        self.assertIn("key_rate", snapshot)
+        self.assertIn("usd", snapshot)
+        self.assertIn("eur", snapshot)
+        self.assertTrue(isinstance(snapshot["key_rate"], (int, float)))
+        self.assertTrue(isinstance(snapshot["usd"], (int, float)))
+        self.assertTrue(isinstance(snapshot["eur"], (int, float)))
 
 
 if __name__ == "__main__":

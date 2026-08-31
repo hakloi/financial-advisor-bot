@@ -157,6 +157,40 @@ def build_personalized_recommendations(profile, transactions, model=None, lang="
     risk_level = (profile or {}).get("risk_level") or "medium"
     current_savings = float((profile or {}).get("current_savings") or 0.0)
     investment_horizon = str((profile or {}).get("investment_horizon") or "medium").lower()
+    category_labels = {
+        "en": {
+            "Salary": "Salary",
+            "Freelance": "Freelance",
+            "Business": "Business",
+            "Gift": "Gift",
+            "Interest": "Interest",
+            "Housing": "Housing",
+            "Food": "Food",
+            "Transport": "Transport",
+            "Shopping": "Shopping",
+            "Health": "Health",
+            "Entertainment": "Entertainment",
+            "Utilities": "Utilities",
+            "Travel": "Travel",
+            "Other": "Other",
+        },
+        "ru": {
+            "Salary": "Зарплата",
+            "Freelance": "Фриланс",
+            "Business": "Бизнес",
+            "Gift": "Подарок",
+            "Interest": "Проценты",
+            "Housing": "Жильё",
+            "Food": "Еда",
+            "Transport": "Транспорт",
+            "Shopping": "Покупки",
+            "Health": "Здоровье",
+            "Entertainment": "Развлечения",
+            "Utilities": "Коммунальные",
+            "Travel": "Путешествия",
+            "Other": "Другое",
+        },
+    }[lang]
 
     income_total = 0.0
     expense_total = 0.0
@@ -197,30 +231,32 @@ def build_personalized_recommendations(profile, transactions, model=None, lang="
         top_share = top_amount / max(expense_total, 1.0)
         share_delta = top_share - baseline
 
+        localized_category = category_labels.get(top_category, top_category)
         if lang == "ru":
             recommendations.append({
-                "title": f"Трата {top_category} — самая большая",
-                "detail": f"В этом периоде на {top_category} потрачено {top_amount:,.0f} ₽, что составляет {top_share:.1%} от всех расходов. Норматив модели для этой категории — {baseline:.1%}.",
+                "title": f"Трата {localized_category} — самая большая",
+                "detail": f"В этом периоде на {localized_category.lower()} потрачено {top_amount:,.0f} ₽, что составляет {top_share:.1%} от всех расходов. Норматив модели для этой категории — {baseline:.1%}.",
                 "priority": "high",
             })
         else:
             recommendations.append({
-                "title": f"{top_category} is your biggest expense",
-                "detail": f"You spent {top_amount:,.0f} ₽ on {top_category}, which is {top_share:.1%} of all expenses. The model baseline for this category is {baseline:.1%}.",
+                "title": f"{localized_category} is your biggest expense",
+                "detail": f"You spent {top_amount:,.0f} ₽ on {localized_category}, which is {top_share:.1%} of all expenses. The model baseline for this category is {baseline:.1%}.",
                 "priority": "high",
             })
 
         if share_delta > 0.05:
+            localized_category = category_labels.get(top_category, top_category)
             if lang == "ru":
                 recommendations.append({
-                    "title": f"Сократите {top_category} до нормы",
-                    "detail": f"Траты по {top_category} превышают модельный ориентир на {share_delta:.1%}. Снижение на 5–10% здесь быстро освободит деньги для накоплений.",
+                    "title": f"Сократите {localized_category.lower()} до нормы",
+                    "detail": f"Траты по {localized_category.lower()} превышают модельный ориентир на {share_delta:.1%}. Снижение на 5–10% здесь быстро освободит деньги для накоплений.",
                     "priority": "medium",
                 })
             else:
                 recommendations.append({
-                    "title": f"Cut {top_category} to the model norm",
-                    "detail": f"Spending on {top_category} is {share_delta:.1%} above the model benchmark. Reducing it by 5–10% would quickly free up cash for savings.",
+                    "title": f"Cut {localized_category} to the model norm",
+                    "detail": f"Spending on {localized_category} is {share_delta:.1%} above the model benchmark. Reducing it by 5–10% would quickly free up cash for savings.",
                     "priority": "medium",
                 })
 
@@ -270,15 +306,17 @@ def build_personalized_recommendations(profile, transactions, model=None, lang="
 
     risk_profile = (model.get("risk_profile") or {}).get(risk_label, {"equity": 0.45, "bonds": 0.35, "cash": 0.2})
     if lang == "ru":
+        risk_title = {"low": "Низкий риск", "medium": "Средний риск", "high": "Высокий риск"}.get(risk_label, risk_label_text)
         recommendations.append({
             "title": "Согласуйте портфель с уровнем риска",
-            "detail": f"Для {risk_label_text} уровня риска и {horizon_hint_ru} оптимальное распределение: {risk_profile.get('equity', 0.45):.0%} акции, {risk_profile.get('bonds', 0.35):.0%} облигации и {risk_profile.get('cash', 0.2):.0%} наличные средства.",
+            "detail": f"Для {risk_title.lower()} и {horizon_hint_ru} оптимальное распределение: {risk_profile.get('equity', 0.45):.0%} акции, {risk_profile.get('bonds', 0.35):.0%} облигации и {risk_profile.get('cash', 0.2):.0%} наличные средства.",
             "priority": "medium",
         })
     else:
+        risk_title = {"low": "Low", "medium": "Medium", "high": "High"}.get(risk_label, risk_label_text)
         recommendations.append({
             "title": "Match your portfolio to your risk profile",
-            "detail": f"For a {risk_label_text} risk profile and {horizon_hint}, a portfolio split of {risk_profile.get('equity', 0.45):.0%} equities, {risk_profile.get('bonds', 0.35):.0%} bonds and {risk_profile.get('cash', 0.2):.0%} cash fits your profile well.",
+            "detail": f"For a {risk_title.lower()} risk profile and {horizon_hint}, a portfolio split of {risk_profile.get('equity', 0.45):.0%} equities, {risk_profile.get('bonds', 0.35):.0%} bonds and {risk_profile.get('cash', 0.2):.0%} cash fits your profile well.",
             "priority": "medium",
         })
 

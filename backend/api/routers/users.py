@@ -6,6 +6,7 @@ from backend.auth.database import get_profile, update_profile, get_avatar, updat
 from backend.auth.hash import hash_password, verify_password # Functions for hashing and verifying passwords
 from backend.auth.jwt import get_current_user # Dependency function to get the current authenticated user
 from backend.finance.recommendations import build_personalized_recommendations, load_recommendation_model
+from backend.finance.news import fetch_financial_news, fetch_market_snapshot
 
 router = APIRouter() # Class used to group related API routes together
 
@@ -108,7 +109,9 @@ def get_user_recommendations(
         model=model,
         lang=lang,
     )
-    return {"items": recommendations}
+    news = fetch_financial_news(lang=lang, limit=4)
+    market = fetch_market_snapshot(lang=lang)
+    return {"items": recommendations, "news": news, "market": market}
 
 
 # Route for updating the user's profile information, which allows the user to modify their age, current savings, currency, risk level, and investment horizon
