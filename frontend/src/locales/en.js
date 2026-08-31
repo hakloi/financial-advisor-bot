@@ -1,4 +1,5 @@
 export default {
+  locale: 'en',
   nav_chat: 'Chat',
   nav_home: 'Home',
   nav_profile: 'Profile',
@@ -19,6 +20,21 @@ export default {
   home_cancel: 'Cancel',
   home_previous_month: 'Previous month',
   home_next_month: 'Next month',
+
+  category_salary: 'Salary',
+  category_freelance: 'Freelance',
+  category_business: 'Business',
+  category_gift: 'Gift',
+  category_interest: 'Interest',
+  category_housing: 'Housing',
+  category_food: 'Food',
+  category_transport: 'Transport',
+  category_shopping: 'Shopping',
+  category_health: 'Health',
+  category_entertainment: 'Entertainment',
+  category_utilities: 'Utilities',
+  category_travel: 'Travel',
+  category_other: 'Other',
 
   chat_placeholder: 'Ask me anything about finance...',
   chat_send: 'Send',

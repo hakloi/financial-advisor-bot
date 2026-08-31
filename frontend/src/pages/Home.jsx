@@ -2,8 +2,8 @@ import { useEffect, useMemo, useState } from 'react'
 import { api, readResponse } from '../api'
 
 const CATEGORY_OPTIONS = {
-  income: ['Salary', 'Freelance', 'Business', 'Gift', 'Interest', 'Other'],
-  expense: ['Housing', 'Food', 'Transport', 'Shopping', 'Health', 'Entertainment', 'Utilities', 'Travel', 'Other'],
+  income: ['salary', 'freelance', 'business', 'gift', 'interest', 'other'],
+  expense: ['housing', 'food', 'transport', 'shopping', 'health', 'entertainment', 'utilities', 'travel', 'other'],
 }
 
 export default function Home({ t }) {
@@ -22,9 +22,11 @@ export default function Home({ t }) {
     return Array.from({ length: count }, (_, index) => index + 1)
   }, [period])
 
-  const monthLabel = new Intl.DateTimeFormat(undefined, { month: 'long' }).format(
-    new Date(period.year, period.month, 1)
-  )
+  // Month Label using locale-sensitive formatting 
+  const monthLabel = new Intl.DateTimeFormat(
+    t.locale === 'ru' ? 'ru-RU' : 'en-US',
+    { month: 'long' }
+  ).format(new Date(period.year, period.month, 1))
 
   const dailyTotals = useMemo(() => {
     const totals = Object.fromEntries(days.map(day => [day, { income: 0, expense: 0 }]))
@@ -164,6 +166,8 @@ export default function Home({ t }) {
         <p className="home-message">{t.home_message}</p>
         {error && <p className="error">{error}</p>}
 
+
+        {/* Section: Finance Month */}
         <section className="finance-month" aria-labelledby="finance-month-title">
           <div className="finance-month-header">
             <div>
@@ -228,7 +232,11 @@ export default function Home({ t }) {
                         <span className="transaction-amount">{Number(transaction.amount).toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ₽</span>
                       </div>
                       <div className="day-transaction-meta">
-                        {transaction.category && <span>{transaction.category}</span>}
+                        {transaction.category && (
+                            <span>
+                              {t[`category_${transaction.category}`] || transaction.category}
+                            </span>
+                          )}
                         {transaction.description && <span>{transaction.description}</span>}
                       </div>
                       <div className="day-transaction-actions">
@@ -256,7 +264,9 @@ export default function Home({ t }) {
                   <input type="number" min="0.01" step="0.01" placeholder={t.home_amount} value={form.amount} onChange={event => setForm({ ...form, amount: event.target.value })} required />
                   <select value={form.category || selectedCategoryOptions[0]} onChange={event => setForm({ ...form, category: event.target.value })}>
                     {selectedCategoryOptions.map(option => (
-                      <option key={option} value={option}>{option}</option>
+                      <option key={option} value={option}>
+                        {t[`category_${option}`]}
+                      </option>
                     ))}
                   </select>
                   <input type="text" maxLength="200" placeholder={t.home_note} value={form.description} onChange={event => setForm({ ...form, description: event.target.value })} />
@@ -266,6 +276,19 @@ export default function Home({ t }) {
             </div>
           )}
         </section>
+
+
+        {/* Section: Finance Month
+        <section className="finance-month" aria-labelledby="finance-month-title">
+          <div className="finance-month-header">
+            <div>
+              <p className="finance-eyebrow">{t.home_finance_eyebrow}</p>
+              <h2 id="finance-month-title">{monthLabel} <span>{period.year}</span></h2>
+            </div>
+
+          </div>
+          </section> */}
+
       </div>
     </div>
   )

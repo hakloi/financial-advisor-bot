@@ -1,4 +1,5 @@
 export default {
+  locale: 'ru',
   nav_chat: 'Чат',
   nav_home: 'Главная',
   nav_profile: 'Профиль',
@@ -19,6 +20,21 @@ export default {
   home_cancel: 'Отмена',
   home_previous_month: 'Предыдущий месяц',
   home_next_month: 'Следующий месяц',
+
+  category_salary: 'Зарплата',
+  category_freelance: 'Фриланс',
+  category_business: 'Бизнес',
+  category_gift: 'Подарок',
+  category_interest: 'Проценты',
+  category_housing: 'Жильё',
+  category_food: 'Еда',
+  category_transport: 'Транспорт',
+  category_shopping: 'Покупки',
+  category_health: 'Здоровье',
+  category_entertainment: 'Развлечения',
+  category_utilities: 'Коммунальные услуги',
+  category_travel: 'Путешествия',
+  category_other: 'Другое',
 
   chat_placeholder: 'Спросите что-нибудь о финансах...',
   chat_send: 'Отправить',

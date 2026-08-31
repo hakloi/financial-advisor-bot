@@ -17,11 +17,10 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Initialize database and tables (securities, market data, and user's income/expenses)
+# Initialize database and tables (securities, market data)
 init_db()
 init_securities_table()
 init_market_data_table()
-##!!!!!!!!!!!!!
 
 # Include routers 
 app.include_router(auth.router, prefix="/auth", tags=["auth"])
