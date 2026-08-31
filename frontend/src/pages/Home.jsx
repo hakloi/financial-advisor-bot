@@ -201,20 +201,21 @@ export default function Home({ t }) {
       <div className="home-content">
         {(market.usd !== null || market.eur !== null || market.cny !== null || market.inr !== null) && (
           <div className="macro-ticker" aria-label="Macro indicators">
-            <div className="macro-ticker-track">
-              {[['USD/RUB', market.usd], ['EUR/RUB', market.eur], ['CNY/RUB', market.cny], ['INR/RUB', market.inr]].map(([label, value], index) => (
-                <span key={`${label}-${index}`} className="macro-ticker-item">
-                  <strong>{label}</strong>
-                  <span>{value !== null ? value.toFixed(2) : '—'}</span>
-                </span>
-              ))}
-              {[['USD/RUB', market.usd], ['EUR/RUB', market.eur], ['CNY/RUB', market.cny], ['INR/RUB', market.inr]].map(([label, value], index) => (
-                <span key={`${label}-copy-${index}`} className="macro-ticker-item">
-                  <strong>{label}</strong>
-                  <span>{value !== null ? value.toFixed(2) : '—'}</span>
-                </span>
-              ))}
-            </div>
+            {(() => {
+              const tickerItems = [['USD/RUB', market.usd], ['EUR/RUB', market.eur], ['CNY/RUB', market.cny], ['INR/RUB', market.inr]]
+              const loopedItems = Array.from({ length: 6 }, () => tickerItems).flat()
+
+              return (
+                <div className="macro-ticker-track">
+                  {loopedItems.map(([label, value], index) => (
+                    <span key={`${label}-${index}`} className="macro-ticker-item">
+                      <strong>{label}</strong>
+                      <span>{value !== null ? value.toFixed(2) : '—'}</span>
+                    </span>
+                  ))}
+                </div>
+              )
+            })()}
           </div>
         )}
         <p className="home-kicker">Fina</p>

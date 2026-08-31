@@ -179,10 +179,16 @@ body {
 .macro-ticker-track {
   display: flex;
   width: max-content;
+  min-width: max-content;
   white-space: nowrap;
-  animation: macro-scroll 20s linear infinite;
+  align-items: center;
   padding: 10px 0;
   gap: 0;
+  will-change: transform;
+  animation: macro-scroll 22s linear infinite;
+}
+.macro-ticker-track:hover {
+  animation-play-state: paused;
 }
 .macro-ticker-item {
   display: inline-flex;
@@ -193,6 +199,7 @@ body {
   font-size: 0.78rem;
   font-weight: 600;
   border-right: 1px solid rgba(148, 163, 184, 0.28);
+  flex-shrink: 0;
 }
 .macro-ticker-item:last-child {
   border-right: none;
