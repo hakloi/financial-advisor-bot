@@ -235,31 +235,6 @@ export default function Home({ t }) {
               <button type="button" onClick={() => changeMonth(1)} aria-label={t.home_next_month}>→</button>
             </div>
           </div>
-          {(market.usd !== null || market.eur !== null || market.cny !== null || market.inr !== null) && (
-            <div className="market-strip">
-              <div className="market-strip-head">
-                <span>{t.locale === 'ru' ? 'Курсы валют' : 'FX rates'}</span>
-              </div>
-              <div className="market-values">
-                <div className="market-metric">
-                  <span>USD/RUB</span>
-                  <strong>{market.usd !== null ? market.usd.toFixed(2) : '—'}</strong>
-                </div>
-                <div className="market-metric">
-                  <span>EUR/RUB</span>
-                  <strong>{market.eur !== null ? market.eur.toFixed(2) : '—'}</strong>
-                </div>
-                <div className="market-metric">
-                  <span>CNY/RUB</span>
-                  <strong>{market.cny !== null ? market.cny.toFixed(2) : '—'}</strong>
-                </div>
-                <div className="market-metric">
-                  <span>INR/RUB</span>
-                  <strong>{market.inr !== null ? market.inr.toFixed(2) : '—'}</strong>
-                </div>
-              </div>
-            </div>
-          )}
           <div className="finance-summary">
             <div className="summary-pill income-pill">
               <span className="summary-label">{t.home_income}</span>

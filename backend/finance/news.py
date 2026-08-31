@@ -113,40 +113,9 @@ def fetch_financial_news(lang="ru", limit=3):
         return cached["data"][:limit]
 
     sources = [
-        {
-            "name": "banki.ru",
-            "url": "https://www.banki.ru/news/lenta/",
-            "selectors": [
-                ".news-item a",
-                "article a",
-                "h3 a",
-                "h2 a",
-                "a[href*=news]",
-            ],
-        },
-        {
-            "name": "cbr.ru",
-            "url": "https://cbr.ru/",
-            "selectors": [
-                "a[href*=press]",
-                "a[href*=news]",
-                "a[href*=analytics]",
-                ".news a",
-                "li a",
-            ],
-        },
-        {
-            "name": "forbes.ru",
-            "url": "https://www.forbes.ru/finansy",
-            "selectors": [
-                "article a",
-                "h2 a",
-                "h3 a",
-                ".news-item a",
-                "a[href*=finansy]",
-                "a[href*=finance]",
-            ],
-        },
+        {"name": "forbes.ru", "url": "https://www.forbes.ru/finansy", "selectors": ["article a", "h2 a", "h3 a", ".news-item a", "a[href*=finansy]", "a[href*=finance]"]},
+        {"name": "banki.ru", "url": "https://www.banki.ru/news/lenta/", "selectors": [".news-item a", "article a", "h3 a", "h2 a", "a[href*=news]"]},
+        {"name": "cbr.ru", "url": "https://cbr.ru/", "selectors": ["a[href*=press]", "a[href*=news]", "a[href*=analytics]", ".news a", "li a"]},
     ]
 
     gathered = []
@@ -161,7 +130,6 @@ def fetch_financial_news(lang="ru", limit=3):
         except Exception:
             links = []
 
-        chosen = None
         for item in links:
             title = _clean_title(item["title"])
             if not title or len(title) < 18 or title.lower() in {"главная", "все новости", "новости", "о нас"}:
@@ -169,25 +137,29 @@ def fetch_financial_news(lang="ru", limit=3):
             if title in seen_titles:
                 continue
             seen_titles.add(title)
-            chosen = {
+            gathered.append({
                 "title": title,
                 "source": source["name"],
                 "url": item["url"],
                 "lang": locale,
-            }
+            })
             break
 
-        if chosen:
-            gathered.append(chosen)
-
-    if not gathered:
-        payload = [
+    if len(gathered) < 3:
+        fallback = [
             {"title": "Финансовые новости недоступны сейчас, но рынок и экономические события продолжают анализироваться.", "source": "banki.ru", "url": "https://www.banki.ru/news/lenta/", "lang": locale},
             {"title": "Ключевые решения центрального банка и макроэкономические сигналы остаются важным ориентиром для портфеля.", "source": "cbr.ru", "url": "https://cbr.ru/", "lang": locale},
             {"title": "Финансовые индикаторы и политика монетарных органов влияют на выбор активов и капитала.", "source": "forbes.ru", "url": "https://www.forbes.ru/finansy", "lang": locale},
         ]
-    else:
-        payload = gathered[:limit]
+        seen = {item["source"] for item in gathered}
+        for item in fallback:
+            if len(gathered) >= 3:
+                break
+            if item["source"] in seen:
+                continue
+            gathered.append(item)
+            seen.add(item["source"])
 
+    payload = gathered[:limit]
     _NEWS_CACHE["news"] = {"ts": now, "data": payload}
     return payload

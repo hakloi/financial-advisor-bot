@@ -180,17 +180,22 @@ body {
   display: flex;
   width: max-content;
   white-space: nowrap;
-  animation: macro-scroll 24s linear infinite;
+  animation: macro-scroll 20s linear infinite;
   padding: 10px 0;
+  gap: 0;
 }
 .macro-ticker-item {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  padding: 0 18px;
+  gap: 6px;
+  padding: 0 14px;
   color: #0f172a;
   font-size: 0.78rem;
   font-weight: 600;
+  border-right: 1px solid rgba(148, 163, 184, 0.28);
+}
+.macro-ticker-item:last-child {
+  border-right: none;
 }
 .macro-ticker-item strong {
   color: #475569;
