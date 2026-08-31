@@ -70,21 +70,6 @@ export default function Home({ t }) {
       .then(data => { if (data.username) setUsername(data.username) })
       .catch(error => setError(error.message))
 
-    api.getRecommendations(t.locale)
-      .then(readResponse)
-      .then(data => {
-        setRecommendations(data.items || [])
-        setNews(data.news || [])
-        setMarket(data.market || { key_rate: null, usd: null, eur: null, labels: {} })
-      })
-      .catch(() => {
-        setRecommendations([])
-        setNews([])
-        setMarket({ key_rate: null, usd: null, eur: null, labels: {} })
-      })
-  }, [t.locale])
-
-  useEffect(() => {
     api.getTransactions(period.year, period.month + 1)
       .then(readResponse)
       .then(setTransactions)
@@ -232,6 +217,39 @@ export default function Home({ t }) {
               <button type="button" onClick={() => changeMonth(1)} aria-label={t.home_next_month}>→</button>
             </div>
           </div>
+          {(market.key_rate !== null || market.usd !== null || market.eur !== null) && (
+            <div className="market-strip">
+              <div className="market-strip-head">
+                <span>{t.locale === 'ru' ? 'Макро-метрики' : 'Macro indicators'}</span>
+              </div>
+              <div className="market-values">
+                <div className="market-metric">
+                  <span>{market.labels.key_rate || (t.locale === 'ru' ? 'Ключевая ставка' : 'Key rate')}</span>
+                  <strong>{market.key_rate !== null ? `${market.key_rate}%` : '—'}</strong>
+                </div>
+                <div className="market-metric">
+                  <span>USD/RUB</span>
+                  <strong>{market.usd !== null ? market.usd.toFixed(2) : '—'}</strong>
+                </div>
+                <div className="market-metric">
+                  <span>EUR/RUB</span>
+                  <strong>{market.eur !== null ? market.eur.toFixed(2) : '—'}</strong>
+                </div>
+              </div>
+              <div className="market-sparkline" aria-hidden="true">
+                <span style={{ height: '30%' }} />
+                <span style={{ height: '42%' }} />
+                <span style={{ height: '55%' }} />
+                <span style={{ height: '68%' }} />
+                <span style={{ height: '48%' }} />
+                <span style={{ height: '72%' }} />
+                <span style={{ height: '85%' }} />
+                <span style={{ height: '76%' }} />
+                <span style={{ height: '88%' }} />
+                <span style={{ height: '92%' }} />
+              </div>
+            </div>
+          )}
           <div className="finance-summary">
             <div className="summary-pill income-pill">
               <span className="summary-label">{t.home_income}</span>
@@ -351,48 +369,21 @@ export default function Home({ t }) {
           </section>
         )}
 
-        {(news.length > 0 || market.key_rate !== null || market.usd !== null || market.eur !== null) && (
-          <div className="market-news-grid">
-            {news.length > 0 && (
-              <section className="news-panel">
-                <div className="recommendation-header">
-                  <p className="finance-eyebrow">{t.locale === 'ru' ? 'Новости' : 'Finance news'}</p>
-                  <h3>{t.locale === 'ru' ? 'Макрообзор' : 'Market updates'}</h3>
-                </div>
-                <div className="news-list">
-                  {news.map((item, index) => (
-                    <a key={`${item.title}-${index}`} href={item.url} target="_blank" rel="noreferrer" className="news-item">
-                      <span className="news-source">{item.source}</span>
-                      <strong>{item.title}</strong>
-                    </a>
-                  ))}
-                </div>
-              </section>
-            )}
-
-            {(market.key_rate !== null || market.usd !== null || market.eur !== null) && (
-              <section className="market-panel">
-                <div className="recommendation-header">
-                  <p className="finance-eyebrow">{t.locale === 'ru' ? 'Рынок' : 'Market'}</p>
-                  <h3>{t.locale === 'ru' ? 'Ключевая ставка и курсы' : 'Key rate & FX'}</h3>
-                </div>
-                <div className="market-grid">
-                  <div className="market-card">
-                    <span>{market.labels.key_rate || (t.locale === 'ru' ? 'Ключевая ставка' : 'Key rate')}</span>
-                    <strong>{market.key_rate !== null ? `${market.key_rate}%` : '—'}</strong>
-                  </div>
-                  <div className="market-card">
-                    <span>USD/RUB</span>
-                    <strong>{market.usd !== null ? market.usd.toFixed(2) : '—'}</strong>
-                  </div>
-                  <div className="market-card">
-                    <span>EUR/RUB</span>
-                    <strong>{market.eur !== null ? market.eur.toFixed(2) : '—'}</strong>
-                  </div>
-                </div>
-              </section>
-            )}
-          </div>
+        {news.length > 0 && (
+          <section className="news-panel">
+            <div className="recommendation-header">
+              <p className="finance-eyebrow">{t.locale === 'ru' ? 'Новости' : 'Finance news'}</p>
+              <h3>{t.locale === 'ru' ? 'Макрообзор' : 'Market updates'}</h3>
+            </div>
+            <div className="news-list">
+              {news.map((item, index) => (
+                <a key={`${item.title}-${index}`} href={item.url} target="_blank" rel="noreferrer" className="news-item">
+                  <span className="news-source">{item.source}</span>
+                  <strong>{item.title}</strong>
+                </a>
+              ))}
+            </div>
+          </section>
         )}
 
         {/* Section: Finance Month

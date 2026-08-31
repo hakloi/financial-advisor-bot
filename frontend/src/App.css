@@ -374,6 +374,62 @@ body {
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }
+.market-strip {
+  margin-bottom: 18px;
+  padding: 12px 14px 10px;
+  border: 1px solid rgba(99, 102, 241, 0.18);
+  border-radius: 12px;
+  background: linear-gradient(135deg, rgba(59,130,246,0.08), rgba(99,102,241,0.08));
+}
+.market-strip-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+  color: #475569;
+  font-size: 0.7rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.market-values {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin-bottom: 10px;
+}
+.market-metric {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: rgba(255,255,255,0.65);
+  border: 1px solid rgba(148, 163, 184, 0.2);
+}
+.market-metric span {
+  color: #64748b;
+  font-size: 0.72rem;
+}
+.market-metric strong {
+  color: #0f172a;
+  font-size: 1.05rem;
+  font-weight: 700;
+}
+.market-sparkline {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 5px;
+  height: 40px;
+  padding-top: 2px;
+}
+.market-sparkline span {
+  display: block;
+  flex: 1;
+  border-radius: 999px 999px 0 0;
+  background: linear-gradient(180deg, rgba(34,197,94,0.9), rgba(99,102,241,0.9));
+  min-height: 6px;
+}
 .market-grid {
   display: grid;
   gap: 10px;

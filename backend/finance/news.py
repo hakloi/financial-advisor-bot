@@ -123,11 +123,11 @@ def fetch_financial_news(lang="ru", limit=3):
             "name": "banki.ru",
             "url": "https://www.banki.ru/news/lenta/",
             "selectors": [
-                "a[href*=news]",
                 ".news-item a",
                 "article a",
                 "h3 a",
                 "h2 a",
+                "a[href*=news]",
             ],
         },
         {
@@ -143,13 +143,14 @@ def fetch_financial_news(lang="ru", limit=3):
         },
         {
             "name": "forbes.ru",
-            "url": "https://www.forbes.ru/",
+            "url": "https://www.forbes.ru/finansy",
             "selectors": [
-                "a[href*=news]",
                 "article a",
                 "h2 a",
                 "h3 a",
                 ".news-item a",
+                "a[href*=finansy]",
+                "a[href*=finance]",
             ],
         },
     ]
@@ -165,8 +166,10 @@ def fetch_financial_news(lang="ru", limit=3):
             links = []
 
         for item in links:
-            title = item["title"]
-            if not title or title in seen:
+            title = _clean_title(item["title"])
+            if not title or len(title) < 18 or title.lower() in {"главная", "все новости", "новости", "о нас"}:
+                continue
+            if title in seen:
                 continue
             seen.add(title)
             gathered.append({
@@ -182,7 +185,7 @@ def fetch_financial_news(lang="ru", limit=3):
 
     if not gathered:
         payload = [
-            {"title": "Финансовые новости недоступны сейчас, но рынок и экономические события продолжают анализироваться.", "source": "insight", "url": "https://www.banki.ru/news/lenta/", "lang": locale},
+            {"title": "Финансовые новости недоступны сейчас, но рынок и экономические события продолжают анализироваться.", "source": "banki.ru", "url": "https://www.banki.ru/news/lenta/", "lang": locale},
             {"title": "Ключевые решения центрального банка и макроэкономические сигналы остаются важным ориентиром для портфеля.", "source": "cbr.ru", "url": "https://cbr.ru/", "lang": locale},
             {"title": "Финансовые индикаторы и политика монетарных органов влияют на выбор активов и капитала.", "source": "forbes.ru", "url": "https://www.forbes.ru/", "lang": locale},
         ]
