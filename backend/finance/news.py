@@ -1,4 +1,5 @@
 import re
+import time
 from urllib.parse import urljoin
 
 import requests
@@ -6,58 +7,68 @@ from bs4 import BeautifulSoup
 
 MOEX_CBR_URL = "https://www.cbr.ru/"
 
+_MARKET_CACHE = {}
+
+
+def _safe_float(value):
+    try:
+        return float(str(value).replace(",", ".").replace("%", ""))
+    except Exception:
+        return None
+
 
 def fetch_market_snapshot(lang="ru"):
     locale = (lang or "ru").lower()
-    fallback = {
-        "key_rate": 21.0,
-        "usd": 90.0,
-        "eur": 98.0,
-    }
-
-    try:
-        response = requests.get(MOEX_CBR_URL, timeout=15, headers={"User-Agent": "Mozilla/5.0"})
-        response.raise_for_status()
-        text = response.text
-        key_match = re.search(r"ключевая ставка.*?(\d+(?:[.,]\d+)?)%?|key rate.*?(\d+(?:[.,]\d+)?)%?", text, re.I | re.S)
-        if key_match:
-            value = key_match.group(1) or key_match.group(2)
-            fallback["key_rate"] = float(value.replace(",", "."))
-
-        usd_match = re.search(r"USD.*?(\d+(?:[.,]\d+)?)|US Dollar.*?(\d+(?:[.,]\d+)?)", text, re.I | re.S)
-        if usd_match:
-            value = usd_match.group(1) or usd_match.group(2)
-            fallback["usd"] = float(value.replace(",", "."))
-
-        eur_match = re.search(r"EUR.*?(\d+(?:[.,]\d+)?)|Euro.*?(\d+(?:[.,]\d+)?)", text, re.I | re.S)
-        if eur_match:
-            value = eur_match.group(1) or eur_match.group(2)
-            fallback["eur"] = float(value.replace(",", "."))
-    except Exception:
-        pass
-
-    if locale == "ru":
-        return {
-            "key_rate": round(fallback["key_rate"], 2),
-            "usd": round(fallback["usd"], 2),
-            "eur": round(fallback["eur"], 2),
+    now = int(time.time())
+    cached = _MARKET_CACHE.get("market")
+    if cached and now - cached["ts"] < 86400:
+        payload = cached["data"]
+        return payload if locale == "ru" else {
+            "key_rate": payload["key_rate"],
+            "usd": payload["usd"],
+            "eur": payload["eur"],
             "labels": {
-                "key_rate": "Ключевая ставка",
+                "key_rate": "Key rate",
                 "usd": "USD/RUB",
                 "eur": "EUR/RUB",
             },
         }
 
-    return {
-        "key_rate": round(fallback["key_rate"], 2),
-        "usd": round(fallback["usd"], 2),
-        "eur": round(fallback["eur"], 2),
+    fallback = {"key_rate": 18.5, "usd": 89.6, "eur": 97.4}
+
+    try:
+        xml_response = requests.get("https://www.cbr.ru/scripts/XML_daily.asp", timeout=15, headers={"User-Agent": "Mozilla/5.0"})
+        xml_response.raise_for_status()
+        xml_text = xml_response.text
+        for code in ("USD", "EUR"):
+            match = re.search(rf"<Valute\s+ID=\"[^\"]+\"[\s\S]*?<CharCode>{code}</CharCode>[\s\S]*?<Value>([0-9,\.]+)</Value>", xml_text)
+            if match:
+                fallback[code.lower()] = _safe_float(match.group(1)) or fallback[code.lower()]
+    except Exception:
+        pass
+
+    try:
+        rate_response = requests.get("https://www.cbr.ru/hd_base/keyrate/", timeout=15, headers={"User-Agent": "Mozilla/5.0"})
+        rate_response.raise_for_status()
+        text = rate_response.text
+        matches = re.findall(r"(?:ключевая ставка|key rate).*?(\d+(?:[.,]\d+)?)\s*%?", text, flags=re.I | re.S)
+        if matches:
+            fallback["key_rate"] = _safe_float(matches[0]) or fallback["key_rate"]
+    except Exception:
+        pass
+
+    payload = {
+        "key_rate": round(float(fallback["key_rate"]), 2),
+        "usd": round(float(fallback["usd"]), 2),
+        "eur": round(float(fallback["eur"]), 2),
         "labels": {
-            "key_rate": "Key rate",
+            "key_rate": "Ключевая ставка" if locale == "ru" else "Key rate",
             "usd": "USD/RUB",
             "eur": "EUR/RUB",
         },
     }
+    _MARKET_CACHE["market"] = {"ts": now, "data": payload}
+    return payload
 
 DEFAULT_NEWS = [
     {
@@ -76,6 +87,8 @@ DEFAULT_NEWS = [
         "url": "https://www.forbes.ru/",
     },
 ]
+
+_NEWS_CACHE = {}
 
 
 def _clean_title(raw_text):
@@ -98,8 +111,13 @@ def _extract_links_from_html(html_text, selectors, base_url):
     return links
 
 
-def fetch_financial_news(lang="ru", limit=5):
+def fetch_financial_news(lang="ru", limit=3):
     locale = (lang or "ru").lower()
+    now = int(time.time())
+    cached = _NEWS_CACHE.get("news")
+    if cached and now - cached["ts"] < 86400:
+        return cached["data"][:limit]
+
     sources = [
         {
             "name": "banki.ru",
@@ -138,7 +156,6 @@ def fetch_financial_news(lang="ru", limit=5):
 
     gathered = []
     seen = set()
-
     for source in sources:
         try:
             response = requests.get(source["url"], timeout=15, headers={"User-Agent": "Mozilla/5.0"})
@@ -158,14 +175,19 @@ def fetch_financial_news(lang="ru", limit=5):
                 "url": item["url"],
                 "lang": locale,
             })
-
+            if len(gathered) >= limit:
+                break
         if len(gathered) >= limit:
             break
 
     if not gathered:
-        return [
+        payload = [
             {"title": "Финансовые новости недоступны сейчас, но рынок и экономические события продолжают анализироваться.", "source": "insight", "url": "https://www.banki.ru/news/lenta/", "lang": locale},
             {"title": "Ключевые решения центрального банка и макроэкономические сигналы остаются важным ориентиром для портфеля.", "source": "cbr.ru", "url": "https://cbr.ru/", "lang": locale},
+            {"title": "Финансовые индикаторы и политика монетарных органов влияют на выбор активов и капитала.", "source": "forbes.ru", "url": "https://www.forbes.ru/", "lang": locale},
         ]
+    else:
+        payload = gathered[:limit]
 
-    return gathered[:limit]
+    _NEWS_CACHE["news"] = {"ts": now, "data": payload}
+    return payload
